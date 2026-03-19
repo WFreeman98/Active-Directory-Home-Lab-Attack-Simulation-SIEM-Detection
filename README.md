@@ -30,7 +30,8 @@ This project simulates a real-world enterprise environment using Active Director
 
 ## Network Architecture
 
-![Lab Architecture](architecture.png)
+<img width="649" height="553" alt="Lab architecture" src="https://github.com/user-attachments/assets/6a08cc82-be36-40ef-8bd2-05fc6318c967" />
+
 
 
 *Lab architecture showing domain controller, workstation, attacker machine, and Splunk SIEM with centralized log forwarding*
@@ -43,7 +44,11 @@ This project simulates a real-world enterprise environment using Active Director
 
 Built a multi-machine lab environment using VirtualBox.
 
-![Virtual Machines](vms.png)
+<img width="662" height="591" alt="Virtual Machines" src="https://github.com/user-attachments/assets/116d14a8-486e-4d61-86c0-4e2d72598e4d" />
+<img width="546" height="629" alt="Virtual Machine Kali" src="https://github.com/user-attachments/assets/242e9add-7d70-4aa0-9775-120f55323654" />
+<img width="544" height="592" alt="VM Windows 2022" src="https://github.com/user-attachments/assets/c887fe1f-8e01-4765-9017-8e6f3078ea5e" />
+<img width="662" height="589" alt="VM SIEM" src="https://github.com/user-attachments/assets/fa09d407-d5c0-40db-84a6-a45b45b9f310" />
+
 
 *Virtual machines deployed in VirtualBox representing domain controller, workstation, attacker system, and SIEM server*
 
@@ -53,11 +58,10 @@ Built a multi-machine lab environment using VirtualBox.
 
 Configured static IP addressing and validated connectivity.
 
-![Network Connectivity](ping.png)
+<img width="662" height="178" alt="Network Connectivity" src="https://github.com/user-attachments/assets/2aa40b2f-0112-4d3f-a552-1867306c0d5d" />
 
 *Successful network connectivity between lab machines verified using ping across internal network*
-
-![SIEM Static IP](ipconfig.png)
+<img width="647" height="172" alt="SIEM Static IP" src="https://github.com/user-attachments/assets/441bf0cf-84d6-4041-a72d-c77681333a74" />
 
 *SIEM server configured with static IP address to ensure reliable log ingestion*
 
@@ -67,7 +71,8 @@ Configured static IP addressing and validated connectivity.
 
 Configured Active Directory domain and enterprise structure.
 
-![Active Directory Setup](ad-users.png)
+<img width="662" height="507" alt="Active Directory Setup" src="https://github.com/user-attachments/assets/e21dc146-2ae1-48aa-8969-4939a98463ee" />
+
 
 *Active Directory domain (corp.local) with organizational units and user accounts configured on domain controller*
 
@@ -77,11 +82,13 @@ Configured Active Directory domain and enterprise structure.
 
 Joined workstation to the domain.
 
-![Domain Join](domain.png)
+<img width="411" height="402" alt="Domain J" src="https://github.com/user-attachments/assets/fce8fdf9-569b-46da-8ff6-c4b988380bab" />
+
+
 
 *Workstation successfully joined to domain with authentication verified using domain credentials*
 
-![AD Computer Object](ad-computer.png)
+<img width="662" height="464" alt="Domain Join" src="https://github.com/user-attachments/assets/a8ae7cf7-9210-45bf-af64-6e0f0a3026b2" />
 
 *Domain workstation visible in Active Directory confirming successful registration*
 
@@ -91,15 +98,18 @@ Joined workstation to the domain.
 
 Deployed Sysmon and centralized logs in Splunk.
 
-![Sysmon Running](sysmon.png)
+<img width="581" height="190" alt="Sysmon Running" src="https://github.com/user-attachments/assets/e9986a1d-80a1-4589-9391-03fe39439f85" />
+
 
 *Sysmon service running on endpoint generating detailed telemetry including process and logon activity*
 
-![Event Viewer Sysmon](eventviewer.png)
+<img width="597" height="550" alt="Sysmon Event Viewer" src="https://github.com/user-attachments/assets/615edd37-0850-4edd-b590-84dc1c5a978a" />
+
 
 *Windows Event Viewer displaying Sysmon logs for endpoint activity monitoring*
 
-![Splunk Log Ingestion](splunk-logs.png)
+<img width="662" height="469" alt="Splunk Log Ingestion" src="https://github.com/user-attachments/assets/2500f254-2cf7-4e99-9160-f3c007708576" />
+
 
 *Splunk receiving endpoint telemetry confirming successful log ingestion from domain systems*
 
@@ -109,17 +119,20 @@ Deployed Sysmon and centralized logs in Splunk.
 
 #### RDP Brute Force (Hydra)
 
-![Hydra Attack](hydra.png)
+<img width="649" height="512" alt="Hydra Attack" src="https://github.com/user-attachments/assets/78124f35-ffdc-4a65-98d3-7c881a27278d" />
+
 
 *Hydra brute force attack generating multiple failed RDP login attempts against target user account*
 
 #### Atomic Red Team (Persistence Simulation)
 
-![Atomic Execution](atomic.png)
+<img width="662" height="523" alt="Atomic Execution" src="https://github.com/user-attachments/assets/a1e503e6-335c-4fa1-a4c6-c9cadd363f5f" />
+
 
 *Atomic Red Team execution simulating account creation (MITRE ATT&CK T1136.001)*
 
-![Account Creation Detection](event4720.png)
+<img width="662" height="467" alt="Account Creation Detection" src="https://github.com/user-attachments/assets/a3ae763d-2fbe-4496-9156-53ffd1e334a6" />
+
 
 *Splunk event showing account creation (EventCode 4720) indicating persistence behavior*
 

@@ -142,7 +142,8 @@ Deployed Sysmon and centralized logs in Splunk.
 
 Detection performed using Splunk queries.
 
-![Splunk Detection](splunk4625.png)
+<img width="1000" height="635" alt="Splunk Detection" src="https://github.com/user-attachments/assets/eab62698-2eba-46ba-bc8e-fdad82a70455" />
+
 
 *Splunk search results showing failed authentication attempts (EventCode 4625) indicating brute force activity*
 

@@ -1,8 +1,8 @@
-# Active-Directory-Home-Lab-Attack-Simulation-SIEM-Detection
+# Active Directory SIEM Detection Lab
 
 ## Objective
 
-This project simulates a real-world enterprise environment using Active Directory, endpoint telemetry, and a SIEM platform to detect and investigate cyber attacks. The goal was to generate realistic attack activity and analyze logs in Splunk to understand how SOC analysts identify and respond to threats.
+This project simulates a real-world enterprise environment using Active Directory, endpoint telemetry, and a SIEM platform to detect and investigate cyber attacks. The objective was to generate realistic attack activity and analyze logs in Splunk to understand how SOC analysts identify, investigate, and respond to threats.
 
 ---
 
@@ -30,83 +30,151 @@ This project simulates a real-world enterprise environment using Active Director
 
 ## Network Architecture
 
-*Lab Architechture Diagram*  
-This diagram shows the virtualized lab environment consisting of a domain controller, workstation, attacker machine, and Splunk SIEM server connected within a private network. Logs are forwarded from endpoints to Splunk for centralized analysis.
+![Lab Architecture](architecture.png)
+
+
+*Lab architecture showing domain controller, workstation, attacker machine, and Splunk SIEM with centralized log forwarding*
 
 ---
 
 ## Key Project Stages
 
 ### Stage 1: Virtual Machine Deployment
-Created a multi-machine lab environment using VirtualBox, including Windows Server, Windows 10, Kali Linux, and Ubuntu Server.
+
+Built a multi-machine lab environment using VirtualBox.
+
+![Virtual Machines](vms.png)
+
+*Virtual machines deployed in VirtualBox representing domain controller, workstation, attacker system, and SIEM server*
 
 ---
 
 ### Stage 2: Network Configuration
-Configured static IP addressing and validated connectivity between all machines using ping tests to ensure proper communication across the environment.
+
+Configured static IP addressing and validated connectivity.
+
+![Network Connectivity](ping.png)
+
+*Successful network connectivity between lab machines verified using ping across internal network*
+
+![SIEM Static IP](ipconfig.png)
+
+*SIEM server configured with static IP address to ensure reliable log ingestion*
 
 ---
 
 ### Stage 3: Active Directory Setup
-Installed and configured Active Directory Domain Services on the Windows Server and created the **corp.local** domain. Organizational units and users were created to simulate an enterprise environment.
+
+Configured Active Directory domain and enterprise structure.
+
+![Active Directory Setup](ad-users.png)
+
+*Active Directory domain (corp.local) with organizational units and user accounts configured on domain controller*
 
 ---
 
 ### Stage 4: Domain Integration
-Joined the Windows 10 workstation (WS01) to the domain and verified successful domain authentication.
+
+Joined workstation to the domain.
+
+![Domain Join](domain.png)
+
+*Workstation successfully joined to domain with authentication verified using domain credentials*
+
+![AD Computer Object](ad-computer.png)
+
+*Domain workstation visible in Active Directory confirming successful registration*
 
 ---
 
 ### Stage 5: Sysmon and Log Forwarding
-Installed Sysmon on both the domain controller and workstation to generate detailed endpoint telemetry. Configured the Splunk Universal Forwarder to send logs to the SIEM server.
 
-*Ref 2: Sysmon and Log Ingestion*  
-Logs from both systems were successfully ingested into Splunk, confirming centralized log collection.
+Deployed Sysmon and centralized logs in Splunk.
+
+![Sysmon Running](sysmon.png)
+
+*Sysmon service running on endpoint generating detailed telemetry including process and logon activity*
+
+![Event Viewer Sysmon](eventviewer.png)
+
+*Windows Event Viewer displaying Sysmon logs for endpoint activity monitoring*
+
+![Splunk Log Ingestion](splunk-logs.png)
+
+*Splunk receiving endpoint telemetry confirming successful log ingestion from domain systems*
 
 ---
 
 ### Stage 6: Attack Simulation
 
 #### RDP Brute Force (Hydra)
-Simulated a brute force attack from Kali Linux targeting the WS01 workstation using Hydra. Multiple failed login attempts were generated.
 
-*Ref 3: Hydra Attack Execution*  
+![Hydra Attack](hydra.png)
+
+*Hydra brute force attack generating multiple failed RDP login attempts against target user account*
 
 #### Atomic Red Team (Persistence Simulation)
-Executed MITRE ATT&CK technique **T1136.001 (Create Local Account)** to simulate persistence.
 
-*Ref 4: Atomic Red Team Execution*
+![Atomic Execution](atomic.png)
+
+*Atomic Red Team execution simulating account creation (MITRE ATT&CK T1136.001)*
+
+![Account Creation Detection](event4720.png)
+
+*Splunk event showing account creation (EventCode 4720) indicating persistence behavior*
 
 ---
 
 ### Stage 7: Detection
 
-Detection was performed in Splunk by analyzing Windows Security logs and Sysmon telemetry.
+Detection performed using Splunk queries.
 
-- Failed logon attempts identified using authentication logs  
-- Unauthorized account creation detected through security events  
-- Detection refined using targeted searches and event correlation  
+![Splunk Detection](splunk4625.png)
 
-*Ref 5: Splunk Detection Results*
+*Splunk search results showing failed authentication attempts (EventCode 4625) indicating brute force activity*
 
 ---
 
 ### Stage 8: Investigation
 
-The attack activity was investigated by analyzing logs in Splunk:
+Following detection of suspicious activity, investigation was performed.
 
-- Multiple failed authentication attempts identified from the attacker machine  
-- Target user account: **bwaltz**  
-- Activity confirmed as brute force behavior  
-- Persistence activity identified through new user account creation  
+#### Brute Force Activity Analysis
 
-The observed activity was mapped to MITRE ATT&CK techniques:
+- Target: WS01  
+- User: bwaltz  
+- Attack: RDP brute force  
+
+Logs showed repeated failed login attempts, confirming password guessing behavior originating from the attacker system.
+
+#### Persistence Activity Analysis
+
+- Technique: T1136.001  
+
+Logs confirmed unauthorized account creation, indicating persistence behavior.
+
+#### Key Findings
+
+- Repeated failed login attempts = brute force  
+- Single account targeted  
+- Unauthorized account creation detected  
+- Activity aligns with known attack techniques  
+
+#### MITRE ATT&CK Mapping
 
 | Technique | Description |
 |----------|------------|
 | T1110 | Brute Force |
 | T1136.001 | Create Local Account |
 | T1021 | Remote Services (RDP) |
+
+---
+
+## SOC Response Considerations  
+
+In a real SOC environment, repeated failed authentication attempts would be flagged as potential brute force activity. Analysts would investigate the source system, review successful login attempts, and determine whether the account was compromised.
+
+If confirmed, the account would be locked or reset, and additional monitoring would be applied to detect further suspicious behavior. Unauthorized account creation would be treated as persistence and escalated for further investigation.
 
 ---
 

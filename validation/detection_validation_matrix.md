@@ -2,7 +2,7 @@
 
 | # | Detection | Attack Simulation | Expected Log Source | Expected Event ID / Telemetry | Status | Screenshot |
 |---|-----------|------------------|---------------------|-------------------------------|--------|------------|
-| 1 | RDP Brute Force | Hydra failed RDP logons | Windows Security | 4625 / Logon Type 3 | Validated | [Evidence](../detections/hydra_rdp_bruteforce.md) |
+| 1 | RDP Brute Force | Hydra failed RDP logons | Windows Security | 4625 / Logon Type 3 | Validated | [Evidence](../attack-simulation/hydra_rdp_bruteforce.md) |e.md) |
 | 2 | Successful Login After Failures | Hydra failures followed by valid login | Windows Security | 4625 + 4624 | Planned | Pending |
 | 3 | Password Spraying | Hydra against multiple users | Windows Security | 4625 | Planned | Pending |
 | 4 | New Account Created | net user / Atomic Red Team | Windows Security | 4720 | Planned | Pending |

@@ -114,11 +114,9 @@ Increase to High if followed by a successful Event ID 4624 logon from the same s
 
 | Evidence | Screenshot |
 |---|---|
-| Hydra attack from Kali | `../screenshots/detections/01_hydra_attack.png` |
-| Raw Event ID 4625 failed logons | `../screenshots/detections/01_raw_4625_events.png` |
-| Splunk detection query result | `../screenshots/detections/01_rdp_bruteforce_detection.png` |
-| Expanded Event ID 4625 details | `../screenshots/detections/01_expanded_4625_event.png` |
-
+| Hydra attack from Kali | <img width="500" alt="hydra_attack" src="https://github.com/user-attachments/assets/ed55f93f-fda6-420c-b93b-ca620abec180" /> |
+| Raw Event ID 4625 failed logons | <img width="500" alt="raw_4625_events" src="https://github.com/user-attachments/assets/938e1144-c209-477c-9e75-e5e32162fbfd" /> |
+| Splunk detection query result | <img width="500" alt="rdp_bruteforce_detection" src="https://github.com/user-attachments/assets/c0845c17-2ed6-4aef-9ae5-7537ac553b15" /> |
 
 ## Analyst Conclusion
 

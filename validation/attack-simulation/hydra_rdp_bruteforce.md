@@ -1,78 +1,127 @@
-# Hydra RDP Brute Force Attack Simulation
+# RDP Brute Force Detection
 
 ## Objective
 
-Simulate an RDP brute-force attack from the Kali Linux attacker machine against the Windows 10 domain workstation WS01.
+Detect repeated failed RDP authentication attempts against a Windows domain workstation.
 
-The purpose of this test is to generate repeated failed authentication attempts that can be detected in Splunk using Windows Security Event ID 4625.
-
-## Lab Systems
-
-| Role | System |
-|---|---|
-| Attacker | Kali Linux |
-| Target | Windows 10 Workstation WS01 |
-| Domain Controller | Windows Server 2022 DC01 |
-| SIEM | Ubuntu Server running Splunk |
-
-## Attack Technique
-
-This simulation represents an attacker attempting to guess valid credentials over Remote Desktop Protocol.
+This detection identifies repeated Windows Security Event ID 4625 failures against a domain user from the same source IP. In this lab, the failed attempts were generated from Kali against Target-PC using the domain account bwaltz.
 
 ## MITRE ATT&CK Mapping
 
 - T1110 - Brute Force
 - T1021.001 - Remote Services: Remote Desktop Protocol
 
-## Attack Command
+## Log Source
 
-```bash
-hydra -l bwaltz -P passwords.txt rdp://<WS01-IP> -V
-```
+- Windows Security Event Logs
+- Splunk Universal Forwarder
+- Windows Event ID 4625
 
-## Expected Telemetry
+## Detection Logic
 
-The attack should generate repeated failed logon events on the Windows workstation.
+This detection looks for multiple failed authentication attempts against the same user from the same source IP.
 
-Expected Windows Security Event:
+In this lab, failed RDP/NLA authentication attempts appeared as Logon Type 3. Logon Type 3 is commonly associated with network-based authentication, while Logon Type 10 is associated with RemoteInteractive RDP sessions. The detection includes both Logon Type 3 and Logon Type 10 to account for RDP/NLA behavior.
 
-```text
-Event ID: 4625
-Description: An account failed to log on
-Logon Type: 10
-Protocol: RDP
-Target Host: WS01
-Target Account: bwaltz
-Source IP: Kali attacker IP
-```
-
-## Splunk Validation Query
+## SPL Query
 
 ```spl
-index=endpoint EventCode=4625
-| eval source_ip=coalesce(src_ip, Source_Network_Address, IpAddress, Workstation_Name)
+index=endpoint host="Target-PC" EventCode=4625
+| eval source_ip=coalesce(Source_Network_Address, IpAddress, Workstation_Name)
 | eval user=coalesce(Account_Name, TargetUserName)
-| where Logon_Type=10 OR Logon_Type="10"
-| stats count earliest(_time) as first_seen latest(_time) as last_seen by source_ip user host
-| where count >= 10
+| search user="bwaltz"
+| where Logon_Type=3 OR Logon_Type=10 OR Logon_Type="3" OR Logon_Type="10"
+| stats count earliest(_time) as first_seen latest(_time) as last_seen by source_ip user host ComputerName Logon_Type
+| where count >= 5
 | convert ctime(first_seen) ctime(last_seen)
 | sort -count
 ```
 
-## Analyst Validation
+## Attack Simulation
 
-The detection is considered successful if Splunk shows multiple failed RDP logon attempts from the Kali source IP against WS01 and the target user account.
+Hydra was used from the Kali Linux attacker machine to generate repeated RDP authentication attempts against Target-PC.
+
+Example command:
+
+```bash
+hydra -l bwaltz -P passwords_wrong.txt rdp://192.168.10.100 -V
+```
+
+The password list contained incorrect passwords to generate failed authentication attempts.
 
 ## Analyst Thought Process
 
-A single failed login may be normal user error. Repeated failed RDP logons from the same source IP against the same account in a short time window suggests brute-force behavior.
+### Initial Alert Meaning
 
-The next investigation step is to search for Event ID 4624 successful logons from the same source IP and target account to determine whether the attacker gained access.
+Repeated failed authentication attempts against the same domain user from the same source IP may indicate brute-force activity or password guessing.
 
-## Screenshots
+### Key Questions
 
-| Screenshot | Status |
+- Which account was targeted?
+- What source IP generated the failures?
+- Were the failures against one host or multiple hosts?
+- Was the activity remote/network-based?
+- Did any successful logon occur after the failed attempts?
+
+### Evidence Reviewed
+
+- Event ID 4625
+- Target account: bwaltz
+- Target host: Target-PC
+- Source IP: 192.168.10.250
+- Logon Type: 3
+- Failure count and time range
+
+## Analyst Investigation Summary
+
+I began the investigation by validating the raw telemetry in Splunk to confirm the alert was based on real authentication activity. I confirmed that Target-PC generated multiple Windows Security Event ID 4625 failed logon events against the domain user bwaltz.
+
+After confirming the event type, I reviewed the key investigation fields: the targeted account, affected host, source IP address, logon type, failure reason, and event timing. The source IP was 192.168.10.250, which matched the Kali attacker machine used during validation. The affected host was Target-PC, and the failed logons appeared as Logon Type 3, which indicates network-based authentication activity and is consistent with RDP/NLA authentication behavior.
+
+I then moved from individual event review to pattern analysis by grouping the failed logons by source IP, user, host, and logon type. This showed repeated failed authentication attempts from the same source IP against the same user account, which supports brute-force or password-guessing behavior rather than an isolated failed login.
+
+The next step in the investigation would be to determine whether the failed attempts were followed by a successful authentication. I would search for Windows Security Event ID 4624 from the same source IP and targeted user. If a successful logon occurred after the repeated failures, I would escalate the severity because the activity could indicate a compromised account.
+
+I would also scope the activity by checking whether the same source IP targeted additional users or hosts. After that, I would review for post-authentication or follow-on activity such as PowerShell execution, new account creation, privileged group changes, scheduled task creation, service installation, or other persistence indicators.
+
+Based on the investigation, the recommended response would be to investigate or block the source IP, reset the targeted account password if compromise is suspected, review RDP access controls, and document the full timeline of observed activity.
+
+## Severity
+
+Medium
+
+Increase to High if followed by a successful Event ID 4624 logon from the same source IP and user.
+
+## False Positive Considerations
+
+- User mistyping a password repeatedly
+- Misconfigured service or scheduled task
+- Authorized administrator testing
+- Vulnerability scanning or lab activity
+- RDP/NLA authentication behavior causing repeated failures
+
+## Recommended Response
+
+- Identify the source IP and confirm whether it is expected.
+- Review the targeted account and determine whether the activity is normal.
+- Search for successful Event ID 4624 logons from the same source IP.
+- Check whether other users or hosts were targeted.
+- Review follow-on activity such as PowerShell execution, account creation, group changes, or persistence.
+- Reset the targeted account password if compromise is suspected.
+- Restrict RDP exposure and enforce MFA where possible.
+
+## Validation Evidence
+
+| Evidence | Screenshot |
 |---|---|
-| Hydra attack running from Kali | Pending |
-| Splunk detection result | Pending |
-| Raw Windows Event ID 4625 details | Pending |
+| Hydra attack from Kali | `../screenshots/detections/01_hydra_attack.png` |
+| Raw Event ID 4625 failed logons | `../screenshots/detections/01_raw_4625_events.png` |
+| Splunk detection query result | `../screenshots/detections/01_rdp_bruteforce_detection.png` |
+| Expanded Event ID 4625 details | `../screenshots/detections/01_expanded_4625_event.png` |
+
+
+## Analyst Conclusion
+
+This detection successfully identified repeated failed authentication attempts against the domain user bwaltz on Target-PC. The activity originated from 192.168.10.250, which matched the Kali attacker machine used during validation. The events were recorded as Windows Security Event ID 4625 with Logon Type 3, indicating network-based authentication behavior consistent with RDP/NLA failed logons.
+
+The activity should be treated as suspected brute force behavior until follow up investigation confirms whether authentication was successful. The most important next step is to search for Event ID 4624 successful logons from the same source IP and user. If successful authentication is found, the investigation should shift from attempted brute force to possible account compromise.

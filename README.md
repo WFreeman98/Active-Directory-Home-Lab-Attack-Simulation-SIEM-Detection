@@ -208,23 +208,23 @@ The purpose of this section is to document how alerts are triaged and investigat
 
 ### Detection Rule Index
 
-| # | Detection | MITRE ATT&CK | Status |
-|---|-----------|--------------|--------|
-| 1 | RDP Brute Force | T1110, T1021.001 | Planned |
-| 2 | Successful Login After Failures | T1110, T1021.001 | Planned |
-| 3 | Password Spraying | T1110.003 | Planned |
-| 4 | New Account Created | T1136 | Planned |
-| 5 | Privileged Group Change | T1098 | Planned |
-| 6 | Encoded PowerShell | T1059.001 | Planned |
-| 7 | PowerShell Download Cradle | T1105 | Planned |
-| 8 | LSASS Access / Credential Dumping | T1003.001 | Planned |
-| 9 | Event Log Clearing | T1070 | Planned |
-| 10 | Defender Tampering | T1562 | Planned |
-| 11 | Scheduled Task Created | T1053 | Planned |
-| 12 | New Service Installed | T1543 | Planned |
-| 13 | LOLBin Spawning Shell | T1218 | Planned |
-| 14 | Internal Network Scan | T1046 | Planned |
-| 15 | Successful Login Then Persistence | T1110, T1136, T1098 | Planned |
+| # | Detection | MITRE ATT&CK | Status | Evidence |
+|---|-----------|--------------|--------|----------|
+| 1 | RDP Brute Force | T1110, T1021.001 | Validated | [Evidence](attack-simulation/hydra_rdp_bruteforce.md) |
+| 2 | Successful Login After Failures | T1110, T1078, T1021.001 | Validated | [Evidence](attack-simulation/successful_login_after_failures.md) |
+| 3 | Password Spraying | T1110.003 | Planned | Pending |
+| 4 | New Account Created | T1136 | Planned | Pending |
+| 5 | Privileged Group Change | T1098 | Planned | Pending |
+| 6 | Encoded PowerShell | T1059.001 | Planned | Pending |
+| 7 | PowerShell Download Cradle | T1105, T1059.001 | Planned | Pending |
+| 8 | LSASS Access / Credential Dumping | T1003.001 | Planned | Pending |
+| 9 | Event Log Clearing | T1070.001 | Planned | Pending |
+| 10 | Defender Tampering | T1562.001 | Planned | Pending |
+| 11 | Scheduled Task Created | T1053.005 | Planned | Pending |
+| 12 | New Service Installed | T1543.003 | Planned | Pending |
+| 13 | LOLBin Spawning Shell | T1218 | Planned | Pending |
+| 14 | Internal Network Scan | T1046 | Planned | Pending |
+| 15 | Successful Login Then Persistence | T1078, T1136, T1098 | Planned | Pending |
 
 ### Validation Matrix
 

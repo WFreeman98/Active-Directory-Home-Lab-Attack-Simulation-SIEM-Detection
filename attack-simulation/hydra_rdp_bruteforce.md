@@ -8,8 +8,10 @@ This detection identifies repeated Windows Security Event ID 4625 failures again
 
 ## MITRE ATT&CK Mapping
 
-- T1110 - Brute Force
-- T1021.001 - Remote Services: Remote Desktop Protocol
+| Tactic | Technique | Evidence |
+|---|---|---|
+| Credential Access | T1110 - Brute Force | Multiple Event ID 4625 failed logons were generated against the same domain user from the same source IP. |
+| Lateral Movement | T1021.001 - Remote Services: Remote Desktop Protocol | The authentication attempts targeted RDP on the domain workstation. |
 
 ## Log Source
 

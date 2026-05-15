@@ -213,7 +213,7 @@ The purpose of this section is to document how alerts are triaged and investigat
 | 1 | RDP Brute Force | T1110, T1021.001 | Validated | [Evidence](attack-simulation/hydra_rdp_bruteforce.md) |
 | 2 | Successful Login After Failures | T1110, T1078, T1021.001 | Validated | [Evidence](attack-simulation/successful_login_after_failures.md) |
 | 3 | Password Spraying | T1110.003, T1021.001 | Validated | [Evidence](attack-simulation/password_spraying.md) |
-| 4 | New Account Created | T1136 | Planned | Pending |
+| 4 | New Account Created | T1136.002 | Validated | [Evidence](attack-simulation/new_account_created.md) |
 | 5 | Privileged Group Change | T1098 | Planned | Pending |
 | 6 | Encoded PowerShell | T1059.001 | Planned | Pending |
 | 7 | PowerShell Download Cradle | T1105, T1059.001 | Planned | Pending |

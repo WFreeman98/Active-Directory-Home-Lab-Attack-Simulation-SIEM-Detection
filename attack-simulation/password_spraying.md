@@ -134,9 +134,9 @@ This detection becomes more suspicious when the source IP is unusual, the number
 
 | Evidence | Screenshot |
 |---|---|
-| Hydra password spray from Kali | ADD_SCREENSHOT_HERE |
-| Raw Event ID 4625 failed logons against multiple users | ADD_SCREENSHOT_HERE |
-| Splunk detection showing multiple targeted users from one source IP | ADD_SCREENSHOT_HERE |
+| Hydra password spray from Kali | <img width="624" height="282" alt="03_hydra_password_spray" src="https://github.com/user-attachments/assets/28bbfe5e-93c8-4509-833b-9c27e2045602" /> |
+| Raw Event ID 4625 failed logons against multiple users | <img width="624" height="308" alt="03_raw_4625_multiple_users" src="https://github.com/user-attachments/assets/07cdf712-0470-4a37-b2ce-0b11b01511b3" /> |
+| Splunk detection showing multiple targeted users from one source IP | <img width="624" height="255" alt="03_password_spraying_detection" src="https://github.com/user-attachments/assets/45af8170-bd86-41c6-be2e-1f5ba94a260a" /> |
 
 ## Analyst Conclusion
 

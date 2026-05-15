@@ -4,7 +4,7 @@
 |---|-----------|------------------|---------------------|-------------------------------|--------|------------|
 | 1 | RDP Brute Force | Hydra failed RDP logons | Windows Security | 4625 / Logon Type 3 | Validated | [Evidence](../attack-simulation/hydra_rdp_bruteforce.md) |
 | 2 | Successful Login After Failures | Hydra failures followed by valid RDP login | Windows Security | 4625 + 4624 | Validated | [Evidence](../attack-simulation/successful_login_after_failures.md) |
-| 3 | Password Spraying | Hydra against multiple users | Windows Security | 4625 | Planned | Pending |
+| 3 | Password Spraying | Hydra against multiple users | Windows Security | 4625 | Validated | [Evidence](../attack-simulation/password_spraying.md) |
 | 4 | New Account Created | net user / Atomic Red Team | Windows Security | 4720 | Planned | Pending |
 | 5 | Privileged Group Change | Add user to admin group | Windows Security | 4728 / 4732 | Planned | Pending |
 | 6 | Encoded PowerShell | Safe encoded PowerShell command | Sysmon | Event ID 1 | Planned | Pending |

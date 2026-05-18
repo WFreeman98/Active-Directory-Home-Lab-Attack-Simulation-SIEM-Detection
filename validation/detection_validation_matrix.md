@@ -8,7 +8,7 @@
 | 4 | New Account Created | Active Directory Users and Computers | Windows Security | 4720 | Validated | [Evidence](../attack-simulation/new_account_created.md) |
 | 5 | Privileged Group Change | Add user to Domain Admins | Windows Security | 4728 | Validated | [Evidence](../attack-simulation/privileged_group_change.md) |
 | 6 | Encoded PowerShell | Safe encoded PowerShell command | Sysmon | Event ID 1 | Validated | [Evidence](../attack-simulation/encoded_powershell.md) |
-| 7 | PowerShell Download Cradle | Invoke-WebRequest from Kali web server | Sysmon | Event ID 1 / 3 | Planned | Pending |
+| 7 | PowerShell Download Cradle | Invoke-WebRequest from Kali web server | Sysmon | Event ID 1 / 3 | Validated | [Evidence](../attack-simulation/powershell_download_cradle.md) |
 | 8 | LSASS Access / Credential Dumping | Atomic Red Team T1003.001 controlled test | Sysmon | Event ID 10 ProcessAccess to lsass.exe | Planned | Pending |
 | 9 | Event Log Clearing | wevtutil test | Windows/Sysmon | 1102 / Event ID 1 | Planned | Pending |
 | 10 | Defender Tampering | Defender tampering command simulation | Windows System / Sysmon | Event ID 1 | Planned | Pending |

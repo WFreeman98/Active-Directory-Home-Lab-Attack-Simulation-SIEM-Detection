@@ -6,7 +6,7 @@
 | 2 | Successful Login After Failures | Hydra failures followed by valid RDP login | Windows Security | 4625 + 4624 | Validated | [Evidence](../attack-simulation/successful_login_after_failures.md) |
 | 3 | Password Spraying | Hydra against multiple users | Windows Security | 4625 | Validated | [Evidence](../attack-simulation/password_spraying.md) |
 | 4 | New Account Created | Active Directory Users and Computers | Windows Security | 4720 | Validated | [Evidence](../attack-simulation/new_account_created.md) |
-| 5 | Privileged Group Change | Add user to admin group | Windows Security | 4728 / 4732 | Planned | Pending |
+| 5 | Privileged Group Change | Add user to Domain Admins | Windows Security | 4728 | Validated | [Evidence](../attack-simulation/privileged_group_change.md) |
 | 6 | Encoded PowerShell | Safe encoded PowerShell command | Sysmon | Event ID 1 | Planned | Pending |
 | 7 | PowerShell Download Cradle | Invoke-WebRequest from Kali web server | Sysmon | Event ID 1 / 3 | Planned | Pending |
 | 8 | LSASS Access / Credential Dumping | Atomic Red Team T1003.001 controlled test | Sysmon | Event ID 10 ProcessAccess to lsass.exe | Planned | Pending |

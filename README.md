@@ -28,6 +28,45 @@ This project simulates a real-world enterprise environment using Active Director
 
 ---
 
+## Detection Engineering Rules
+
+This section contains 15 Splunk detection rules built from the Active Directory home lab. Each detection includes the attack behavior, MITRE ATT&CK mapping, SPL query, severity, false positive considerations, analyst thought process, and response steps.
+
+The purpose of this section is to document how alerts are triaged and investigated in a SOC-style workflow. Each detection follows this process:
+
+1. Simulate attacker behavior in the isolated lab.
+2. Confirm the expected Windows or Sysmon telemetry is generated.
+3. Build a Splunk SPL detection rule.
+4. Validate the detection using real lab logs.
+5. Document the analyst thought process.
+6. Capture screenshots as evidence.
+7. Update the validation matrix.
+
+--
+
+### Detection Rule Index
+
+| # | Detection | MITRE ATT&CK | Status | Evidence |
+|---|-----------|--------------|--------|----------|
+| 1 | RDP Brute Force | T1110, T1021.001 | Validated | [Evidence](attack-simulation/hydra_rdp_bruteforce.md) |
+| 2 | Successful Login After Failures | T1110, T1078, T1021.001 | Validated | [Evidence](attack-simulation/successful_login_after_failures.md) |
+| 3 | Password Spraying | T1110.003, T1021.001 | Validated | [Evidence](attack-simulation/password_spraying.md) |
+| 4 | New Account Created | T1136.002 | Validated | [Evidence](attack-simulation/new_account_created.md) |
+| 5 | Privileged Group Change | T1098 | Validated | [Evidence](attack-simulation/privileged_group_change.md) |
+| 6 | Encoded PowerShell | T1059.001, T1027 | Validated | [Evidence](attack-simulation/encoded_powershell.md) |
+| 7 | PowerShell Download Cradle | T1105, T1059.001 | Planned | Pending |
+| 8 | LSASS Access / Credential Dumping | T1003.001 | Planned | Pending |
+| 9 | Event Log Clearing | T1070.001 | Planned | Pending |
+| 10 | Defender Tampering | T1562.001 | Planned | Pending |
+| 11 | Scheduled Task Created | T1053.005 | Planned | Pending |
+| 12 | New Service Installed | T1543.003 | Planned | Pending |
+| 13 | LOLBin Spawning Shell | T1218 | Planned | Pending |
+| 14 | Internal Network Scan | T1046 | Planned | Pending |
+| 15 | Successful Login Then Persistence | T1078, T1136, T1098 | Planned | Pending |
+
+--
+
+
 ## Network Architecture
 
 <img width="649" height="553" alt="Lab architecture" src="https://github.com/user-attachments/assets/6a08cc82-be36-40ef-8bd2-05fc6318c967" />
@@ -191,20 +230,6 @@ In a real SOC environment, repeated failed authentication attempts would be flag
 If confirmed, the account would be locked or reset, and additional monitoring would be applied to detect further suspicious behavior. Unauthorized account creation would be treated as persistence and escalated for further investigation.
 
 ---
-
-## Detection Engineering Rules
-
-This section contains 15 Splunk detection rules built from the Active Directory home lab. Each detection includes the attack behavior, MITRE ATT&CK mapping, SPL query, severity, false positive considerations, analyst thought process, and response steps.
-
-The purpose of this section is to document how alerts are triaged and investigated in a SOC-style workflow. Each detection follows this process:
-
-1. Simulate attacker behavior in the isolated lab.
-2. Confirm the expected Windows or Sysmon telemetry is generated.
-3. Build a Splunk SPL detection rule.
-4. Validate the detection using real lab logs.
-5. Document the analyst thought process.
-6. Capture screenshots as evidence.
-7. Update the validation matrix.
 
 ### Detection Rule Index
 

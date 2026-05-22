@@ -10,7 +10,7 @@
 | 6 | Encoded PowerShell | Safe encoded PowerShell command | Sysmon | Event ID 1 | Validated | [Evidence](../attack-simulation/encoded_powershell.md) |
 | 7 | PowerShell Download Cradle | Invoke-WebRequest from Kali web server | Sysmon | Event ID 1 / 3 | Validated | [Evidence](../attack-simulation/powershell_download_cradle.md) |
 | 8 | LSASS Access / Credential Dumping | Safe LSASS process access simulation | Sysmon | Event ID 10 ProcessAccess to lsass.exe | Validated | [Evidence](../attack-simulation/lsass_access.md) |
-| 9 | Event Log Clearing | wevtutil test | Windows/Sysmon | 1102 / Event ID 1 | Planned | Pending |
+| 9 | Event Log Clearing | wevtutil test | Windows Security | 1102 | Validated | [Evidence](../attack-simulation/event_log_clearing.md) |
 | 10 | Defender Tampering | Defender tampering command simulation | Windows System / Sysmon | Event ID 1 | Planned | Pending |
 | 11 | Scheduled Task Created | schtasks test | Windows/Sysmon | 4698 / Event ID 1 | Planned | Pending |
 | 12 | New Service Installed | sc.exe create test service | Windows System / Sysmon | 7045 / Event ID 1 | Planned | Pending |

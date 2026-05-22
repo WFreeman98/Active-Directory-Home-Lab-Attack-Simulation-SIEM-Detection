@@ -55,7 +55,7 @@ The purpose of this section is to document how alerts are triaged and investigat
 | 5 | Privileged Group Change | T1098 | Validated | [Evidence](attack-simulation/privileged_group_change.md) |
 | 6 | Encoded PowerShell | T1059.001, T1027 | Validated | [Evidence](attack-simulation/encoded_powershell.md) |
 | 7 | PowerShell Download Cradle | T1105, T1059.001 | Validated | [Evidence](attack-simulation/powershell_download_cradle.md) |
-| 8 | LSASS Access / Credential Dumping | T1003.001 | Planned | Pending |
+| 8 | LSASS Access / Credential Dumping | T1003.001 | Validated | [Evidence](attack-simulation/lsass_access.md) |
 | 9 | Event Log Clearing | T1070.001 | Planned | Pending |
 | 10 | Defender Tampering | T1562.001 | Planned | Pending |
 | 11 | Scheduled Task Created | T1053.005 | Planned | Pending |

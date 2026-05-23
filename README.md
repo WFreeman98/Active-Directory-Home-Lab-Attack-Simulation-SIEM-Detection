@@ -213,13 +213,6 @@ Logs confirmed unauthorized account creation, indicating persistence behavior.
 - Unauthorized account creation detected  
 - Activity aligns with known attack techniques  
 
-#### MITRE ATT&CK Mapping
-
-| Technique | Description |
-|----------|------------|
-| T1110 | Brute Force |
-| T1136.001 | Create Local Account |
-| T1021 | Remote Services (RDP) |
 
 ---
 
@@ -230,26 +223,6 @@ In a real SOC environment, repeated failed authentication attempts would be flag
 If confirmed, the account would be locked or reset, and additional monitoring would be applied to detect further suspicious behavior. Unauthorized account creation would be treated as persistence and escalated for further investigation.
 
 ---
-
-### Detection Rule Index
-
-| # | Detection | MITRE ATT&CK | Status | Evidence |
-|---|-----------|--------------|--------|----------|
-| 1 | RDP Brute Force | T1110, T1021.001 | Validated | [Evidence](attack-simulation/hydra_rdp_bruteforce.md) |
-| 2 | Successful Login After Failures | T1110, T1078, T1021.001 | Validated | [Evidence](attack-simulation/successful_login_after_failures.md) |
-| 3 | Password Spraying | T1110.003, T1021.001 | Validated | [Evidence](attack-simulation/password_spraying.md) |
-| 4 | New Account Created | T1136.002 | Validated | [Evidence](attack-simulation/new_account_created.md) |
-| 5 | Privileged Group Change | T1098 | Validated | [Evidence](attack-simulation/privileged_group_change.md) |
-| 6 | Encoded PowerShell | T1059.001, T1027 | Validated | [Evidence](attack-simulation/encoded_powershell.md) |
-| 7 | PowerShell Download Cradle | T1105, T1059.001 | Planned | Pending |
-| 8 | LSASS Access / Credential Dumping | T1003.001 | Planned | Pending |
-| 9 | Event Log Clearing | T1070.001 | Planned | Pending |
-| 10 | Defender Tampering | T1562.001 | Planned | Pending |
-| 11 | Scheduled Task Created | T1053.005 | Planned | Pending |
-| 12 | New Service Installed | T1543.003 | Planned | Pending |
-| 13 | LOLBin Spawning Shell | T1218 | Planned | Pending |
-| 14 | Internal Network Scan | T1046 | Planned | Pending |
-| 15 | Successful Login Then Persistence | T1078, T1136, T1098 | Planned | Pending |
 
 ### Validation Matrix
 

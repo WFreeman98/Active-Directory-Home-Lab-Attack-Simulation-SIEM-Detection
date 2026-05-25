@@ -67,7 +67,7 @@ Each detection followed the same validation process:
 
 ## Detection Coverage
 
-**Current progress:** 9 of 15 detections validated. Remaining detections are planned for future expansion.
+**Current progress:** 15 of 15 detections validated.
 
 ### Detection Rule Index
 
@@ -87,8 +87,7 @@ Each detection followed the same validation process:
 | 12 | New Service Installed | T1543.003 | Validated | [Evidence](attack-simulation/new_service_installed.md) |
 | 13 | Certutil File Download | T1105, T1218 | Validated | [Evidence](attack-simulation/certutil_file_download.md) |
 | 14 | Internal Network Scan | T1046 | Validated | [Evidence](attack-simulation/internal_network_scan.md) |
-| 15 | Successful Login Then Persistence | T1078, T1136, T1098 | Planned | Pending |
-
+| 15 | Successful Login Then Persistence | T1078, T1136.001, T1098 | Validated | [Evidence](attack-simulation/successful_login_then_persistence.md) |
 The full validation tracker is available here:
 
 [Detection Validation Matrix](validation/detection_validation_matrix.md)

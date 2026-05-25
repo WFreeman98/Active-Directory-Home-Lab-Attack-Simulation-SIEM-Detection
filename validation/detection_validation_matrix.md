@@ -12,7 +12,7 @@
 | 8 | LSASS Access / Credential Dumping | Safe LSASS process access simulation | Sysmon | Event ID 10 ProcessAccess to lsass.exe | Validated | [Evidence](../attack-simulation/lsass_access.md) |
 | 9 | Event Log Clearing | wevtutil test | Windows Security | 1102 | Validated | [Evidence](../attack-simulation/event_log_clearing.md) |
 | 10 | Defender Tampering | Defender tampering command simulation | Sysmon | Event ID 1 | Validated | [Evidence](../attack-simulation/defender_tampering.md) |
-| 11 | Scheduled Task Created | schtasks test | Windows/Sysmon | 4698 / Event ID 1 | Planned | Pending |
+| 11 | Scheduled Task Created | schtasks test | Windows/Sysmon | 4698 / Event ID 1 | Validated | [Evidence](../attack-simulation/scheduled_task_created.md) |
 | 12 | New Service Installed | sc.exe create test service | Windows System / Sysmon | 7045 / Event ID 1 | Planned | Pending |
 | 13 | LOLBin Spawning Shell | rundll32/mshta spawning cmd/powershell | Sysmon | Event ID 1 | Planned | Pending |
 | 14 | Internal Network Scan | Nmap scan from Kali | Sysmon/Firewall | Event ID 3 / firewall logs | Planned | Pending |

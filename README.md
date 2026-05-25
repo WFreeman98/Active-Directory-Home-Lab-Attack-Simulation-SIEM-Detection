@@ -88,6 +88,7 @@ Each detection followed the same validation process:
 | 13 | Certutil File Download | T1105, T1218 | Validated | [Evidence](attack-simulation/certutil_file_download.md) |
 | 14 | Internal Network Scan | T1046 | Validated | [Evidence](attack-simulation/internal_network_scan.md) |
 | 15 | Successful Login Then Persistence | T1078, T1136.001, T1098 | Validated | [Evidence](attack-simulation/successful_login_then_persistence.md) |
+
 The full validation tracker is available here:
 
 [Detection Validation Matrix](validation/detection_validation_matrix.md)
@@ -106,6 +107,12 @@ The full validation tracker is available here:
 - Detecting suspicious LSASS process access
 - Investigating Windows Security log clearing
 - Mapping detection logic to MITRE ATT&CK techniques
+- Detecting Defender tampering command-line indicators
+- Investigating scheduled task creation
+- Detecting new Windows service installation
+- Identifying certutil-based file download behavior
+- Reviewing internal network scan activity
+- Correlating successful logon activity with persistence actions
 
 ---
 
@@ -273,21 +280,22 @@ This project was built in a controlled home lab environment rather than a produc
 Future improvements include:
 
 - Generalized SPL detection logic
-- Multi-host correlation rules
+- Multi host correlation rules
 - Sigma rule conversion
 - SOAR integration
 - Automated alerting
-- Expanded attack-chain correlation
-- Additional detections for scheduled tasks, service creation, Defender tampering, LOLBins, and internal scanning
+- Expanded attack chain correlation
+- Dashboard creation for detection coverage and alert triage
+- Additional network based analysis using Wireshark or Zeek
 
 ---
-
 ## Repository Structure
 
 ```text
 Active-Directory-SIEM-Detection-Lab/
 │
 ├── README.md
+│
 ├── attack-simulation/
 │   ├── hydra_rdp_bruteforce.md
 │   ├── successful_login_after_failures.md
@@ -297,10 +305,17 @@ Active-Directory-SIEM-Detection-Lab/
 │   ├── encoded_powershell.md
 │   ├── powershell_download_cradle.md
 │   ├── lsass_access.md
-│   └── event_log_clearing.md
+│   ├── event_log_clearing.md
+│   ├── defender_tampering.md
+│   ├── scheduled_task_created.md
+│   ├── new_service_installed.md
+│   ├── certutil_file_download.md
+│   ├── internal_network_scan.md
+│   └── successful_login_then_persistence.md
 │
 ├── validation/
 │   └── detection_validation_matrix.md
 │
 └── images/
     └── project screenshots
+```

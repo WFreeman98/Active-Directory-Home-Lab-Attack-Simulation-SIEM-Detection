@@ -83,7 +83,7 @@ Each detection followed the same validation process:
 | 8 | LSASS Access / Credential Dumping | T1003.001 | Validated | [Evidence](attack-simulation/lsass_access.md) |
 | 9 | Event Log Clearing | T1070.001 | Validated | [Evidence](attack-simulation/event_log_clearing.md) |
 | 10 | Defender Tampering | T1562.001 | Validated | [Evidence](attack-simulation/defender_tampering.md) |
-| 11 | Scheduled Task Created | T1053.005 | Planned | Pending |
+| 11 | Scheduled Task Created | T1053.005 | Validated | [Evidence](attack-simulation/scheduled_task_created.md) |
 | 12 | New Service Installed | T1543.003 | Planned | Pending |
 | 13 | LOLBin Spawning Shell | T1218 | Planned | Pending |
 | 14 | Internal Network Scan | T1046 | Planned | Pending |

@@ -85,7 +85,7 @@ Each detection followed the same validation process:
 | 10 | Defender Tampering | T1562.001 | Validated | [Evidence](attack-simulation/defender_tampering.md) |
 | 11 | Scheduled Task Created | T1053.005 | Validated | [Evidence](attack-simulation/scheduled_task_created.md) |
 | 12 | New Service Installed | T1543.003 | Validated | [Evidence](attack-simulation/new_service_installed.md) |
-| 13 | LOLBin Spawning Shell | T1218 | Planned | Pending |
+| 13 | Certutil File Download | T1105, T1218 | Validated | [Evidence](attack-simulation/certutil_file_download.md) |
 | 14 | Internal Network Scan | T1046 | Planned | Pending |
 | 15 | Successful Login Then Persistence | T1078, T1136, T1098 | Planned | Pending |
 

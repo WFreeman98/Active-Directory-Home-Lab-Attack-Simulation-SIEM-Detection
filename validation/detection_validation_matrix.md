@@ -14,6 +14,6 @@
 | 10 | Defender Tampering | Defender tampering command simulation | Sysmon | Event ID 1 | Validated | [Evidence](../attack-simulation/defender_tampering.md) |
 | 11 | Scheduled Task Created | schtasks test | Windows/Sysmon | 4698 / Event ID 1 | Validated | [Evidence](../attack-simulation/scheduled_task_created.md) |
 | 12 | New Service Installed | sc.exe create test service | Windows System / Sysmon | 7045 / Event ID 1 | Validated | [Evidence](../attack-simulation/new_service_installed.md) |
-| 13 | LOLBin Spawning Shell | rundll32/mshta spawning cmd/powershell | Sysmon | Event ID 1 | Planned | Pending |
+| 13 | Certutil File Download | certutil download from Kali web server | Sysmon / Windows Defender | Event ID 1 / Event ID 3 / Defender Alert | Validated | [Evidence](../attack-simulation/certutil_file_download.md) |
 | 14 | Internal Network Scan | Nmap scan from Kali | Sysmon/Firewall | Event ID 3 / firewall logs | Planned | Pending |
 | 15 | Successful Login Then Persistence | 4624 followed by 4720/4732 | Windows Security | 4624 + 4720/4732 | Planned | Pending |

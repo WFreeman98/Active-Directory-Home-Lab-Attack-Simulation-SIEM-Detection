@@ -1,7 +1,6 @@
 Detection 3 Password Spraying
 
-Purpose
-Detect password spraying activity against multiple Windows domain user accounts.
+The Purpose of this detection is to detect password spraying activity against multiple Windows domain user accounts.
 
 This detection looks for one source IP generating failed logons against more than one user account.
 The lab activity was generated from Kali against Target-PC.

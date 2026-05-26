@@ -1,35 +1,58 @@
-# Detection 03: Password Spraying
+Detection 3 Password Spraying
 
-## Objective
-
+Purpose
 Detect password spraying activity against multiple Windows domain user accounts.
 
-This detection identifies repeated Windows Security Event ID 4625 failed logons from the same source IP against multiple user accounts. In this lab, Hydra was used from Kali to attempt a single password across multiple domain users on Target-PC.
+This detection looks for one source IP generating failed logons against more than one user account.
+The lab activity was generated from Kali against Target-PC.
+The main event used for this detection is Windows Security Event ID 4625.
 
-## MITRE ATT&CK Mapping
+Lab Systems
+Attacker: Kali Linux
+Target: Target-PC
+Domain: corp.local
+SIEM: Splunk
+Log Source: Windows Security
+Forwarder: Splunk Universal Forwarder
 
-| Tactic | Technique | Evidence |
-|---|---|---|
-| Credential Access | T1110.003 - Password Spraying | A single password was attempted against multiple domain user accounts from the same source IP. |
-| Lateral Movement | T1021.001 - Remote Services: Remote Desktop Protocol | The authentication attempts targeted RDP on the domain workstation. |
+MITRE ATT&CK
+Credential Access: T1110.003 Password Spraying
+Lateral Movement: T1021.001 Remote Services: Remote Desktop Protocol
 
-## Log Source
+Why This Matters
+Password spraying is different from normal brute forcing.
+A brute force attack usually tries many passwords against one account.
+Password spraying usually tries one password against many accounts.
 
-- Windows Security Event Logs
-- Splunk Universal Forwarder
-- Windows Event ID 4625
+That makes spraying harder to catch if the attacker moves slowly.
+The important pattern is not just the number of failures.
+The important pattern is one source touching multiple accounts.
 
-## Detection Logic
+Expected Logs
+Event ID: 4625
+Host: Target-PC
+Source IP: 192.168.10.250
+Logon Type: 3
+Result: failed authentication
+Pattern: multiple users targeted from the same source IP
 
-This detection looks for failed authentication attempts from the same source IP against multiple user accounts.
+Users Tested
+PWaltz@corp.local
+AJones@corp.local
+TLee@corp.local
+BWaltz@corp.local
+JGarcia@corp.local
+MJones@corp.local
 
-Password spraying is different from brute forcing. In a brute-force attack, many passwords are tried against one account. In a password spraying attack, one password is tried against many accounts.
+Kali Command
+hydra -L spray_users.txt -p 'Kali2026' rdp://192.168.10.100 -V -t 1
 
-In this lab, the failed RDP/NLA authentication attempts appeared as Logon Type 3.
+Notes
+The password was intentionally wrong.
+The goal was to generate failed authentication logs, not gain access.
+This was done in an isolated lab environment.
 
-## SPL Query
-
-```spl
+Splunk Search
 index=endpoint host="Target-PC" EventCode=4625
 | eval source_ip=coalesce(Source_Network_Address, IpAddress, Workstation_Name)
 | eval user=lower(coalesce(TargetUserName, Account_Name))
@@ -37,109 +60,118 @@ index=endpoint host="Target-PC" EventCode=4625
 | stats count as failure_count dc(user) as unique_users values(user) as targeted_users values(Logon_Type) as logon_types by source_ip host ComputerName
 | where unique_users >= 3 AND failure_count >= 3
 | sort -unique_users
-```
 
-## Attack Simulation
+What The Search Does
+Searches for failed Windows logons.
+Normalizes the source IP field.
+Normalizes the username field.
+Limits the activity to the Kali attacker IP.
+Counts how many failures happened.
+Counts how many unique users were targeted.
+Shows the targeted users in the result.
+Flags the activity when at least 3 users were targeted.
 
-Hydra was used from the Kali Linux attacker machine to attempt one password across multiple domain user accounts.
+Fields I Checked
+1.time
+2.host
+3.ComputerName
+4.EventCode
+5.TargetUserName
+6.Account Name
+7.Source Network Address
+8.IpAddress
+9.Workstation Name
+10.Logon Type
+11.Failure Reason
 
-Example user list:
+Detection Result
+The search showed failed logons from 192.168.10.250.
+The failures targeted multiple domain users.
+The destination system was Target-PC.
+The failed logons appeared as Logon Type 3.
+That behavior matched the expected RDP/NLA password spray activity.
 
-```text
-PWaltz@corp.local
-AJones@corp.local
-TLee@corp.local
-BWaltz@corp.local
-JGarcia@corp.local
-MJones@corp.local
-```
+Analyst Notes
+I treated this differently than the RDP brute force detection.
+The brute force detection focused on repeated failures against one user.
+This detection focused on one source IP targeting multiple users.
 
-Example command:
+The unique user count is the main signal here.
+A single failed login is not enough.
+A few failures against different users from the same source is more suspicious.
 
-```bash
-hydra -L spray_users.txt -p 'Kali2026' rdp://192.168.10.100 -V -t 1
-```
+The next check would be Event ID 4624.
+If any sprayed account logs in successfully after the failures, the alert should be treated as possible account compromise.
 
-The sprayed password was intentionally incorrect, which generated failed authentication attempts.
+Follow Up Search
+index=endpoint host="Target-PC" (EventCode=4625 OR EventCode=4624)
+| eval source_ip=coalesce(Source_Network_Address, IpAddress, Workstation_Name)
+| eval user=lower(coalesce(TargetUserName, Account_Name))
+| where source_ip="192.168.10.250"
+| table _time EventCode source_ip user host ComputerName Logon_Type Failure_Reason
+| sort _time
 
-## Detection Result
+What I Would Check Next
+Check if any targeted user had a successful Event ID 4624.
+Check if the same source IP targeted other hosts.
+Check if the source IP is expected in the environment.
+Check if any accounts were locked out.
+Check if the activity happened outside normal hours.
+Check for PowerShell, new services, scheduled tasks, or account changes after any successful login.
 
-The detection identified multiple failed logon attempts from source IP `192.168.10.250` against several domain user accounts.
-
-The activity targeted `Target-PC` and generated Windows Security Event ID 4625 failures. The failed logons appeared as Logon Type 3, consistent with RDP/NLA authentication behavior.
-
-## Analyst Thought Process
-
-### Initial Alert Meaning
-
-A single source IP generating failed logons against multiple users may indicate password spraying.
-
-### Key Questions
-
-- What source IP generated the failed logons?
-- How many unique users were targeted?
-- Was the same password attempted across multiple accounts?
-- Were the attempts against a single host or multiple hosts?
-- Did any account successfully authenticate after the spray?
-
-### Evidence Reviewed
-
-- Event ID 4625
-- Multiple targeted domain users
-- Source IP: 192.168.10.250
-- Target host: Target-PC
-- Logon Type: 3
-- Failure reason: unknown username or bad password
-- Unique user count
-- Failure count
-
-## Analyst Investigation Summary
-
-I began by validating the raw Windows Security telemetry in Splunk. Target-PC generated multiple Event ID 4625 failed logons from the Kali attacker IP address, `192.168.10.250`.
-
-Unlike the RDP brute-force detection, this activity involved multiple user accounts instead of repeated attempts against only one user. This pattern is more consistent with password spraying, where an attacker tests a common password across several accounts to avoid lockouts.
-
-I then grouped the failed logons by source IP and counted the number of unique targeted users. The detection showed multiple user accounts receiving failed logons from the same source IP, supporting the password spraying behavior.
-
-The next investigation step would be to check whether any of the targeted users had a successful Event ID 4624 logon after the spray. If a successful login occurred, the investigation would escalate to possible account compromise.
-
-## Severity
-
+Severity
 Medium
 
-Increase to High if any targeted account has a successful Event ID 4624 logon after the spray.
+Raise To High If
+A targeted user has a successful Event ID 4624 after the spray.
+The source IP is unknown or external.
+The same source targets multiple systems.
+The activity happens outside normal business hours.
+There is follow-on activity after authentication.
 
-## False Positive Considerations
+False Positives
+Help desk testing.
+Administrator testing.
+User onboarding.
+Misconfigured authentication scripts.
+Password policy testing.
+Lab-generated authentication testing.
 
-- Help desk or administrator testing
-- Misconfigured authentication scripts
-- Users mistyping shared or temporary passwords
-- Lab-generated authentication testing
-- Password policy or onboarding testing
+Tuning Notes
+The lab query is intentionally simple.
+For production, I would add a time window.
+I would also exclude known admin systems and approved testing hosts.
+I would tune the unique user threshold based on normal login behavior.
+I would alert higher when a successful login follows the spray.
 
-This detection becomes more suspicious when the source IP is unusual, the number of targeted users is high, the activity occurs in a short time window, or a successful login follows the failed attempts.
+Response Notes
+Identify the source IP.
+Review the targeted accounts.
+Confirm whether the activity was authorized.
+Search for successful logons after the spray.
+Check for account lockouts.
+Reset passwords if compromise is suspected.
+Restrict RDP exposure where possible.
+Enforce MFA where possible.
+Document the full authentication timeline.
 
-## Recommended Response
+Validation Evidence
 
-- Identify the source IP and determine whether it is expected.
-- Review the list of targeted accounts.
-- Search for successful Event ID 4624 logons after the spray.
-- Check whether the same source IP targeted additional hosts.
-- Review for account lockouts or additional authentication failures.
-- Reset passwords for affected accounts if compromise is suspected.
-- Enforce MFA and account lockout protections where possible.
-- Document the full authentication timeline.
+1.Hydra password spray from Kali
 
-## Validation Evidence
+<img width="624" height="282" alt="03_hydra_password_spray" src="https://github.com/user-attachments/assets/28bbfe5e-93c8-4509-833b-9c27e2045602" />
 
-| Evidence | Screenshot |
-|---|---|
-| Hydra password spray from Kali | <img width="624" height="282" alt="03_hydra_password_spray" src="https://github.com/user-attachments/assets/28bbfe5e-93c8-4509-833b-9c27e2045602" /> |
-| Raw Event ID 4625 failed logons against multiple users | <img width="624" height="308" alt="03_raw_4625_multiple_users" src="https://github.com/user-attachments/assets/07cdf712-0470-4a37-b2ce-0b11b01511b3" /> |
-| Splunk detection showing multiple targeted users from one source IP | <img width="624" height="255" alt="03_password_spraying_detection" src="https://github.com/user-attachments/assets/45af8170-bd86-41c6-be2e-1f5ba94a260a" /> |
+2.Raw Event ID 4625 failed logons against multiple users
+<img width="624" height="308" alt="03_raw_4625_multiple_users" src="https://github.com/user-attachments/assets/07cdf712-0470-4a37-b2ce-0b11b01511b3" />
 
-## Analyst Conclusion
+3.Splunk detection showing multiple targeted users from one source IP
+<img width="624" height="255" alt="03_password_spraying_detection" src="https://github.com/user-attachments/assets/45af8170-bd86-41c6-be2e-1f5ba94a260a" />
 
-This detection successfully identified password spraying behavior against multiple domain user accounts. Hydra was used from Kali to attempt one password across several users, and Target-PC generated Windows Security Event ID 4625 failed logons from source IP `192.168.10.250`.
+Conclusion
+This detection validated password spraying behavior in the lab.
+Hydra attempted one password across multiple domain accounts.
+Target-PC generated Windows Security Event ID 4625 failed logons from the Kali source IP.
+The Splunk search grouped the failures by source IP and counted unique targeted users.
 
-The activity should be treated as suspected password spraying because the same source IP targeted multiple user accounts in a short period. The most important next step is to determine whether any targeted account had a successful Event ID 4624 logon after the spray.
+The activity should be treated as suspected password spraying.
+The most important next step is to check for successful Event ID 4624 logons after the failed attempts.

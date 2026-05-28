@@ -1,75 +1,80 @@
-# Detection 14: Internal Network Scan
+Detection 14 Internal Network Scan
 
-## Objective
-
+Objective
 Detect internal network scanning activity from one host to another.
 
-This detection identifies scan like network activity where one internal system attempts to connect to a target host across multiple ports. In this lab, Kali Linux performed a controlled Nmap scan against Target-PC. Windows Filtering Platform events were used to validate inbound connection attempts from the scanning host.
+This detection uses Windows Filtering Platform events from Target-PC.
+The main event used for this detection is Windows Security Event ID 5156.
 
-## MITRE ATT&CK Mapping
+The goal is to identify when one internal host attempts connections to another internal host across ports.
+In this lab, Kali Linux scanned Target-PC using Nmap.
 
-| Tactic | Technique | Evidence |
-|---|---|---|
-| Discovery | T1046 - Network Service Scanning | Kali scanned Target-PC across multiple TCP ports using Nmap. |
+Internal scanning can be normal when it comes from vulnerability scanners or admin systems.
+It still needs to be reviewed because scanning can also be reconnaissance before brute force, lateral movement, service abuse, or exploitation.
 
-## Log Source
-
-- Windows Security Logs
-- Windows Filtering Platform
-- Splunk Universal Forwarder
-- Windows Event ID 5156: The Windows Filtering Platform has permitted a connection
-- Host: Target-PC
-
-## Detection Logic
-
-This detection looks for Windows Filtering Platform events involving repeated inbound connections from the same source host to the same destination host.
-
-In this lab, the key indicator was traffic from Kali Linux to Target-PC:
-
-```text
+Lab Setup
+Scanner: Kali Linux
+Target: Target-PC
+SIEM: Splunk
+Log Source: Windows Security
+Telemetry: Windows Filtering Platform
+Event ID: 5156
 Source IP: 192.168.10.250
 Destination IP: 192.168.10.100
-Direction: Inbound
-Event ID: 5156
-```
+Target Port Seen: 135
 
-Internal scanning activity may indicate reconnaissance, service discovery, lateral movement preparation, or unauthorized network mapping.
+MITRE ATT&CK
+Discovery: T1046 - Network Service Scanning
 
-## SPL Query
+Detection Logic
+Look for repeated Windows Filtering Platform events involving one source host connecting to a target host.
 
-```spl
+In this lab, the key behavior was traffic from Kali to Target-PC.
+
+Important indicators:
+EventCode 5156
+SourceAddress 192.168.10.250
+DestAddress 192.168.10.100
+Direction Inbound
+Multiple destination ports
+Nmap scan output
+Target-PC firewall events
+
+SPL Search
 index=endpoint host="Target-PC" EventCode=5156 "192.168.10.250"
 | table _time EventCode host ComputerName Direction SourceAddress SourcePort DestAddress DestPort Protocol Application
 | sort -_time
-```
 
-If parsed fields are not available, the raw event can be reviewed with:
-
-```spl
+Raw Event Search
 index=endpoint host="Target-PC" EventCode=5156 "192.168.10.250"
 | table _time EventCode host ComputerName _raw
 | sort -_time
-```
 
-## Safe Attack Simulation
+Port Count Search
+index=endpoint host="Target-PC" EventCode=5156 "192.168.10.250"
+| stats count dc(DestPort) as unique_ports values(DestPort) as scanned_ports by SourceAddress DestAddress host
+| sort -unique_ports
 
+Safe Lab Simulation
 A controlled Nmap scan was launched from Kali Linux against Target-PC.
 
 Command used:
-
-```bash
 nmap -sS -Pn -p 1-1000 192.168.10.100
-```
 
-The scan targeted ports `1-1000` on Target-PC and identified TCP port `135` as open.
+The scan targeted TCP ports 1 through 1000 on Target-PC.
+Nmap identified TCP port 135 as open.
 
-## Detection Result
+This test was controlled.
+It was performed inside the lab.
+It did not exploit the target.
+It did not brute-force credentials.
+It did not modify the system.
+It was only used to generate network scan telemetry.
 
-Splunk returned Windows Filtering Platform events involving Kali’s IP address.
+Detection Result
+Splunk returned Windows Filtering Platform Event ID 5156 events from Target-PC.
 
 Observed evidence:
-
-```text
 Event ID: 5156
 Message: The Windows Filtering Platform has permitted a connection
 Source Address: 192.168.10.250
@@ -78,80 +83,128 @@ Destination Port: 135
 Direction: Inbound
 Protocol: TCP
 Host: Target-PC
-```
 
-The raw event matched the Nmap scan output, which showed port `135/tcp` open on Target-PC.
+The Splunk evidence matched the Nmap result.
+Nmap showed 135/tcp open, and the Windows event showed inbound traffic from Kali to Target-PC on port 135.
 
-## Analyst Thought Process
+Analyst Review
+The first thing I checked was whether the scan source matched the Kali machine.
+The Windows Filtering Platform event showed SourceAddress 192.168.10.250, which matched Kali.
 
-### Initial Alert Meaning
+The next thing I checked was whether the destination matched Target-PC.
+The event showed traffic to 192.168.10.100, which matched Target-PC.
 
-A single internal host attempted network connections to another internal host. When this behavior occurs across many ports or systems, it may indicate network service scanning or reconnaissance.
+The important part is the pattern.
+One connection to one port may not be enough by itself.
+Repeated connections from the same source to multiple ports or multiple hosts is what makes this look like scanning.
 
-### Key Questions
+The important fields were:
+SourceAddress
+SourcePort
+DestAddress
+DestPort
+Direction
+Protocol
+Application
+Host
+ComputerName
+EventCode
+_time
 
-- Which host initiated the scan?
-- Which host was targeted?
-- Which ports were contacted?
-- Was the scan authorized?
-- Did the source host scan other systems?
-- Did the scan occur before authentication attempts, service creation, or lateral movement?
-- Was the source host a known administrator system, vulnerability scanner, or unknown endpoint?
+Investigation Questions I would ask myself
 
-### Evidence Reviewed
+1.Which host initiated the scan?
 
-- Nmap output from Kali
-- Windows Filtering Platform Event ID 5156
-- Source IP address
-- Destination IP address
-- Destination port
-- Direction of traffic
-- Raw Windows Security event data
+2.Which host was targeted?
 
-## Analyst Investigation Summary
+3.How many ports were contacted?
 
-A controlled Nmap scan was launched from Kali Linux against Target-PC. The scan targeted TCP ports `1-1000` and identified `135/tcp` as open. Splunk returned Windows Filtering Platform Event ID `5156` events involving Kali’s IP address `192.168.10.250`.
+4.Which ports were open?
 
-The raw event confirmed inbound traffic from Kali to Target-PC, including a connection to TCP port `135`. This matched the Nmap scan result and validated the internal network scan detection.
+5.Was the source host authorized to scan?
 
-## Severity
+6.Was the source host a vulnerability scanner?
 
+7.Did the scan happen during an approved maintenance window?
+
+8.Did the same source scan other hosts?
+
+9.Did the scan happen before failed logons?
+
+10.Did the scan happen before a successful logon?
+
+11.Did the scan happen before service creation?
+
+12.Did the scan happen before scheduled task creation?
+
+13.Did the scan happen before lateral movement?
+
+14.Is the source host expected to communicate with the target?
+
+Severity
 Medium
 
-Internal network scanning may be legitimate when performed by vulnerability scanners or administrators. It becomes more suspicious when the source host is not approved for scanning, the scan targets many hosts, occurs outside maintenance windows, or is followed by authentication attempts, service creation, remote execution, or lateral movement.
+Raise to High if:
+The source host is not approved for scanning.
+The scan targets many hosts.
+The scan targets sensitive systems.
+The scan occurs outside maintenance windows.
+The scan is followed by failed logons.
+The scan is followed by a successful logon.
+The scan is followed by new service creation.
+The scan is followed by scheduled task creation.
+The scan is followed by PowerShell execution or file downloads.
 
-## False Positive Considerations
+False Positives
+Approved vulnerability scans
+Network discovery tools
+Administrator troubleshooting
+Asset inventory tools
+Endpoint management platforms
+Security team testing
+Lab validation
 
-- Approved vulnerability scans
-- Network discovery tools
-- Administrator troubleshooting
-- Asset inventory tools
-- Endpoint management platforms
-- Security team testing
-- Lab-generated simulation activity
+Tuning Notes
+This search is broad on purpose for lab validation.
+In production, I would tune by approved scanner IPs, target subnet, maintenance windows, port count, host count, and follow-on activity.
 
-This detection becomes more suspicious when scanning is followed by brute-force attempts, successful logons, privileged group changes, scheduled task creation, or new service installation.
+Good tuning ideas:
+Allowlist approved vulnerability scanners.
+Track scans outside maintenance windows.
+Alert higher when one source touches many ports.
+Alert higher when one source touches many hosts.
+Alert higher when scanning is followed by authentication attempts.
+Alert higher when scanning is followed by service creation or scheduled tasks.
+Correlate scan activity with Windows Security Event ID 4625 and 4624.
+Correlate scan activity with Sysmon process and network events.
 
-## Recommended Response
+Recommended Response for this alert:
+Identify the source host.
+Identify the target host or subnet.
+Review the scanned ports.
+Determine whether the source is an approved scanner.
+Check if the scan occurred during an approved window.
+Search for other hosts scanned by the same source.
+Review authentication activity after the scan.
+Review service creation and scheduled task activity after the scan.
+Review endpoint activity from the source host if available.
+Escalate if the source is unauthorized or tied to suspicious behavior.
+Document the source, target, ports, timing, and follow-on activity.
 
-- Identify the source host.
-- Identify the targeted host or subnet.
-- Review scanned ports and protocols.
-- Determine whether the source system is authorized to perform scanning.
-- Check whether other systems were scanned by the same source.
-- Review logs for follow-on activity such as failed logons, successful logons, service creation, or scheduled task creation.
-- Validate whether the activity matches an approved vulnerability scan or maintenance window.
-- Escalate if the scan source is unauthorized or associated with suspicious endpoint behavior.
-- Document the timeline and affected systems.
+Validation Evidence
 
-## Validation Evidence
+1.Kali Nmap scan against Target-PC
+<img width="624" height="237" alt="14_nmap_scan_command" src="https://github.com/user-attachments/assets/355ae7c9-d72c-4b34-9bcf-a1e0937fbd33" />
 
-| Evidence | Screenshot |
-|---|---|
-| Kali Nmap scan against Target-PC | <img width="624" height="237" alt="14_nmap_scan_command" src="https://github.com/user-attachments/assets/355ae7c9-d72c-4b34-9bcf-a1e0937fbd33" /> |
-| Raw Windows Filtering Platform Event ID 5156 showing inbound connection from Kali | <img width="624" height="348" alt="14_raw_firewall_scan_events" src="https://github.com/user-attachments/assets/f4791a75-10ac-4d83-b559-ee81f34eeb9e" /> |
-| Splunk detection query showing firewall events involving Kali IP | <img width="624" height="163" alt="14_internal_network_scan_detection" src="https://github.com/user-attachments/assets/983efc69-a899-46e1-9550-1312769508f1" /> |
+2.Raw Windows Filtering Platform Event ID 5156 showing inbound connection from Kali
+<img width="624" height="348" alt="14_raw_firewall_scan_events" src="https://github.com/user-attachments/assets/f4791a75-10ac-4d83-b559-ee81f34eeb9e" />
 
-## Analyst Conclusion
+3.Splunk detection query showing firewall events involving Kali IP
+<img width="624" height="163" alt="14_internal_network_scan_detection" src="https://github.com/user-attachments/assets/983efc69-a899-46e1-9550-1312769508f1" />
 
-In my conclusion, internal network scanning is an important behavior to investigate because it can represent legitimate vulnerability assessment activity or unauthorized reconnaissance. This lab showed how Nmap scan activity from Kali could be validated using Windows Filtering Platform Event ID 5156 on Target-PC. In a real investigation, I would review the source host, target host, scanned ports, timing, authorization status, and any follow-on activity to determine whether the scan was approved or suspicious.
+Analyst Conclusion
+This detection confirmed internal network scanning activity from Kali to Target-PC using Windows Filtering Platform Event ID 5156.
+
+The scan was safely performed with Nmap in the lab and targeted TCP ports 1 through 1000. Splunk showed inbound connection events from 192.168.10.250 to 192.168.10.100, and the firewall event matched the Nmap output showing port 135 open.
+
+In a real SOC investigation, I would not treat every scan as malicious right away. I would first confirm whether the source host is an approved vulnerability scanner or admin system. If the source is not approved, I would review the scanned ports, scope the activity across other hosts, and check for follow-on behavior such as failed logons, successful logons, scheduled tasks, new services, PowerShell activity, or lateral movement.

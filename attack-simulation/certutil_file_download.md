@@ -203,6 +203,7 @@ Document the full timeline.
 Validation Evidence
 
 1.Certutil download command or Defender block alert
+
 <img width="475" height="378" alt="13_certutil_download_command_or_defender_block" src="https://github.com/user-attachments/assets/6e5d7f77-6ef3-4544-a846-916b18bb76ec" />
 
 2.Raw Sysmon evidence showing certutil process creation or related telemetry

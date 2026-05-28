@@ -1,146 +1,180 @@
-# Detection 10: Defender Tampering
+Detection 10 Defender Tampering
 
-## Objective
+Objective
+Detect command line activity that looks like Microsoft Defender tampering.
 
-Detect command-line activity associated with Microsoft Defender tampering behavior.
+This detection uses Sysmon process creation telemetry from Target-PC.
+The main event used for this detection is Sysmon Event ID 1.
 
-This detection identifies suspicious PowerShell command-line indicators commonly associated with attempts to disable or modify Microsoft Defender protections. In this lab, a safe command line simulation was used to generate Sysmon Event ID `1` telemetry without actually disabling Defender or changing security settings.
+The lab used a safe simulation command.
+Defender was not disabled.
+No exclusions were added.
+No security settings were changed.
 
-## MITRE ATT&CK Mapping
+Lab Setup
+Host: Target-PC
+SIEM: Splunk
+Log Source: Sysmon
+Event ID: 1
+Process: powershell.exe
 
-| Tactic | Technique | Evidence |
-|---|---|---|
-| Defense Evasion | T1562.001 - Impair Defenses: Disable or Modify Tools | PowerShell command line contained Microsoft Defender tampering indicators. |
+MITRE ATT&CK
+Defense Evasion: T1562.001 - Disable or Modify Tools
 
-## Log Source
+Detection Logic
+Look for process creation events where the command line contains Microsoft Defender tampering indicators.
 
-- Sysmon Operational Logs
-- Splunk Universal Forwarder
-- Sysmon Event ID 1: Process Creation
-- Host: Target-PC
-
-## Detection Logic
-
-This detection looks for Sysmon process creation events where the command line contains Microsoft Defender tampering indicators such as:
-
-```text
+Common indicators:
 Set-MpPreference
 DisableRealtimeMonitoring
 Add-MpPreference
 ExclusionPath
 DisableBehaviorMonitoring
-```
 
-Attackers may attempt to disable security tools, modify Microsoft Defender settings, or add exclusions to prevent malware, tools, or scripts from being detected.
+These keywords matter because attackers may try to weaken endpoint protection before running tools, downloading payloads, dumping credentials, or creating persistence.
 
-## SPL Query
-
-```spl
+SPL Search
 index=endpoint host="Target-PC" source="*Sysmon*" EventCode=1
 ("DisableRealtimeMonitoring" OR "Set-MpPreference" OR "Add-MpPreference" OR "ExclusionPath" OR "DisableBehaviorMonitoring")
 | table _time EventCode host ComputerName Image CommandLine ParentImage User
 | sort -_time
-```
 
-## Safe Attack Simulation
-
-A safe simulation command was executed on Target-PC to generate Defender tampering-style command-line telemetry.
+Safe Lab Simulation
+A safe PowerShell command was executed on Target-PC.
 
 Command used:
-
-```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Write-Output 'SIMULATION: Set-MpPreference -DisableRealtimeMonitoring True'"
-```
 
-This command did **not** disable Microsoft Defender, add exclusions, or modify security settings. It only generated command-line evidence for detection validation.
+This command was safe.
+It only printed text.
+It did not disable Microsoft Defender.
+It did not add exclusions.
+It did not change Defender settings.
+It was only used to generate command-line telemetry for detection validation.
 
-## Detection Result
-
-Splunk detected a Sysmon Event ID `1` process creation event from Target-PC.
+Detection Result
+Splunk returned a Sysmon Event ID 1 process creation event from Target-PC.
 
 The event showed:
-
-```text
 Event ID: 1
 Host: Target-PC
 Image: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
 CommandLine: powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Write-Output 'SIMULATION: Set-MpPreference -DisableRealtimeMonitoring True'"
-```
 
-## Analyst Thought Process
+Analyst Review
+The first thing I checked was whether the event was real process execution.
+Sysmon Event ID 1 confirmed that PowerShell ran on Target-PC.
 
-### Initial Alert Meaning
+The next thing I checked was the command line.
+The command line contained Defender tampering indicators, including Set-MpPreference and DisableRealtimeMonitoring.
 
-The command line contained Microsoft Defender tampering indicators. In a real environment, this could indicate an attacker attempting to disable endpoint protection, reduce detection coverage, or create exclusions for malicious tools.
+In this lab, those words were only printed as part of a safe simulation.
+In a real SOC investigation, I would need to verify whether Defender settings were actually changed.
 
-### Key Questions
+The important fields were:
+Host
+User
+Image
+ParentImage
+CommandLine
+EventID
+Source
 
-- Which host executed the command?
-- Which user launched the process?
-- Was Microsoft Defender actually modified?
-- Was the command part of authorized administration or testing?
-- Did the same host show suspicious PowerShell, downloads, credential access, or persistence activity?
-- Were any Defender exclusions added?
-- Did endpoint protection generate related alerts?
+This detection is useful because command line telemetry can show intent or attempted defense evasion even before the analyst confirms whether the change succeeded.
 
-### Evidence Reviewed
+Investigation Questions I asked myself
 
-- Sysmon Event ID 1 process creation
-- Host: Target-PC
-- Image: powershell.exe
-- CommandLine containing `Set-MpPreference` and `DisableRealtimeMonitoring`
-- Parent process
-- User context
-- Raw Sysmon event data
+1.Which host ran the command?
 
-## Analyst Investigation Summary
+2.Which user launched PowerShell?
 
-I generated a safe Defender tampering simulation on Target-PC using PowerShell. The command included Defender tampering keywords but did not actually disable Defender or change security settings.
+3.What parent process launched PowerShell?
 
-After running the simulation, I searched Splunk for Sysmon Event ID `1` process creation events containing Defender tampering indicators. Splunk returned a matching Sysmon event showing PowerShell execution with `Set-MpPreference` and `DisableRealtimeMonitoring` in the command line.
+4.Was Defender actually changed?
 
-In a real SOC investigation, this alert would require immediate validation to determine whether Defender protections were actually disabled, exclusions were added, or the activity was part of a broader attack chain.
+5.Were any exclusions added?
 
-## Severity
+6.Was real time protection disabled?
 
+7.Was behavior monitoring disabled?
+
+8.Was this part of approved administration?
+
+9.Did the host show encoded PowerShell?
+
+10.Did the host download files before or after this?
+
+11.Did the host show LSASS access?
+
+12.Did the host create scheduled tasks or new services?
+
+13.Was the Security log cleared afterward?
+
+Severity
 High
 
-Defender tampering should be treated as high severity because attackers commonly attempt to disable security controls before executing malware, dumping credentials, maintaining persistence, or moving laterally.
+Defender tampering should be treated as high severity until proven authorized.
 
-## False Positive Considerations
+Keep High if:
+Defender settings were actually changed.
+Exclusions were added.
+PowerShell was launched from an unusual parent process.
+The activity happened after a suspicious download.
+The activity happened before LSASS access.
+The activity happened before persistence.
+The same host also had event log clearing.
+The user account is not expected to make security changes.
 
-- Authorized administrator testing
-- Security team validation
-- Endpoint management scripts
-- Troubleshooting by IT staff
-- Lab-generated simulation activity
-- Approved configuration management tools
+False Positives
+Authorized administrator testing
+Security team validation
+Endpoint management scripts
+Troubleshooting by IT staff
+Approved configuration management tools
+Lab validation
 
-This detection becomes more suspicious when paired with encoded PowerShell, suspicious downloads, LSASS access, new services, scheduled tasks, or event log clearing.
+Tuning Notes
+This search is broad on purpose for lab validation.
+In production, I would tune this by checking whether Defender settings actually changed and by reviewing the user, parent process, and surrounding activity.
 
-## Recommended Response
+Good tuning ideas:
+Allowlist approved endpoint management tools.
+Allowlist known security team scripts.
+Alert higher when PowerShell is launched by Office, browsers, or unknown processes.
+Alert higher when Defender tampering follows suspicious downloads.
+Alert higher when Defender tampering happens before LSASS access.
+Alert higher when exclusions are added for Temp, Downloads, AppData, or unknown tool folders.
+Correlate with Defender logs and Sysmon process activity.
 
-- Identify the affected host and user.
-- Confirm whether Defender settings were actually modified.
-- Review Microsoft Defender event logs and security alerts.
-- Check for exclusions, disabled protections, or policy changes.
-- Review surrounding PowerShell and process creation activity.
-- Search for related suspicious activity such as downloads, credential access, persistence, or lateral movement.
-- Isolate the host if malicious activity is suspected.
-- Re-enable protections if they were disabled.
-- Reset credentials if account compromise is suspected.
-- Document the full timeline and escalation actions.
+Recommended Response for this alert:
+Identify the affected host and user.
+Review the full PowerShell command line.
+Check the parent process.
+Confirm whether Defender settings changed.
+Check for new Defender exclusions.
+Review Microsoft Defender event logs.
+Review endpoint security alerts.
+Search for related PowerShell activity.
+Search for downloads, LSASS access, scheduled tasks, services, or event log clearing.
+Re-enable protections if they were disabled.
+Isolate the host if malicious behavior is confirmed.
+Reset credentials if account compromise is suspected.
+Document the full timeline.
 
-## Validation Evidence
+Validation Evidence
 
-| Evidence | Screenshot |
-|---|---|
-| Safe PowerShell simulation command containing Defender tampering indicators | <img width="646" height="82" alt="10_defender_tampering_simulation_command" src="https://github.com/user-attachments/assets/033f8510-d199-4d7d-a278-085421e5f137" /> |
-| Raw Sysmon Event ID 1 showing PowerShell command-line evidence | <img width="624" height="382" alt="10_raw_ sysmon_eventid1_defender_tampering" src="https://github.com/user-attachments/assets/b2f3fb88-7143-4568-a905-58bb0d3ed6ea" /> |
-| Splunk detection query identifying Defender tampering indicators | <img width="624" height="385" alt="10_defender_tampering_detection" src="https://github.com/user-attachments/assets/9e1fea3b-2541-45e4-8aa6-0bb9d4476615" /> |
+1.Safe PowerShell simulation command containing Defender tampering indicators
+<img width="646" height="82" alt="10_defender_tampering_simulation_command" src="https://github.com/user-attachments/assets/033f8510-d199-4d7d-a278-085421e5f137" />
 
-## Analyst Conclusion
+2.Raw Sysmon Event ID 1 showing PowerShell command-line evidence
+<img width="624" height="382" alt="10_raw_ sysmon_eventid1_defender_tampering" src="https://github.com/user-attachments/assets/b2f3fb88-7143-4568-a905-58bb0d3ed6ea" />
 
-This detection successfully identified Defender tampering style command-line activity using Sysmon Event ID `1` and Splunk. The test was safely simulated and did not modify Microsoft Defender settings.
+3.Splunk detection query identifying Defender tampering indicators
+<img width="624" height="385" alt="10_defender_tampering_detection" src="https://github.com/user-attachments/assets/9e1fea3b-2541-45e4-8aa6-0bb9d4476615" />
 
-This detection is important because disabling or modifying security tools is a common defense evasion technique. In a real investigation, the next step would be to verify whether Defender settings were changed and determine whether the activity was part of a larger compromise.
+Analyst Conclusion
+This detection confirmed Defender tampering-style command-line activity on Target-PC using Sysmon Event ID 1.
+
+The lab command was intentionally safe and did not modify Microsoft Defender. It only generated command-line evidence that looked like Defender tampering so the detection logic could be validated in Splunk.
+
+This detection matters because attackers often try to weaken security tools before running malware, dumping credentials, or creating persistence. In a real SOC investigation, I would not stop at the keyword match. I would confirm whether Defender settings changed, check for exclusions, review the parent process, and search for related activity before and after the event.

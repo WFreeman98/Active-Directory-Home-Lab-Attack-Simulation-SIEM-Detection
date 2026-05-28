@@ -194,6 +194,7 @@ Document the source, target, ports, timing, and follow-on activity.
 Validation Evidence
 
 1.Kali Nmap scan against Target-PC
+
 <img width="624" height="237" alt="14_nmap_scan_command" src="https://github.com/user-attachments/assets/355ae7c9-d72c-4b34-9bcf-a1e0937fbd33" />
 
 2.Raw Windows Filtering Platform Event ID 5156 showing inbound connection from Kali

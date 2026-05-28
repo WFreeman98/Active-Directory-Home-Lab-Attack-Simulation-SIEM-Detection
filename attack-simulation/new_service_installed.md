@@ -1,175 +1,228 @@
-# Detection 12: New Service Installed
+Detection 12 New Service Installed
 
-## Objective
+Objective
+Detect new Windows service installation activity on a Windows endpoint.
 
-Detect new Windows service installation activity commonly associated with persistence, execution, and privilege abuse.
+This detection uses Windows System Event ID 7045 and Sysmon Event ID 1 from Target-PC.
+The goal is to identify when a new service is installed and review what the service is configured to run.
 
-This detection identifies service creation using Windows System Event ID `7045` and Sysmon Event ID `1`. In this lab, a harmless service was created using `sc.exe` to simulate Windows service creation behavior without executing malware or establishing malicious persistence.
+Windows services are normal in enterprise environments.
+They still need to be reviewed because attackers can use services for persistence, execution, privilege escalation, or lateral movement.
 
-## MITRE ATT&CK Mapping
+Lab Setup
+Host: Target-PC
+SIEM: Splunk
+Log Sources: Windows System and Sysmon
+Windows System Event ID: 7045
+Sysmon Event ID: 1
+Tool Used: sc.exe
+Service Name: EndpointInventorySvc
 
-| Tactic | Technique | Evidence |
-|---|---|---|
-| Persistence | T1543.003 - Create or Modify System Process: Windows Service | A new Windows service was created using `sc.exe`. |
-| Privilege Escalation | T1543.003 - Create or Modify System Process: Windows Service | Windows service creation can be abused to run commands with elevated privileges. |
+MITRE ATT&CK
+Persistence: T1543.003 - Windows Service
+Privilege Escalation: T1543.003 - Windows Service
 
-## Log Source
+Detection Logic
+Look for new Windows service installation using both Windows System logs and Sysmon process creation logs.
 
-- Windows System Logs
-- Sysmon Operational Logs
-- Splunk Universal Forwarder
-- Windows System Event ID 7045: A service was installed in the system
-- Sysmon Event ID 1: Process Creation
-- Host: Target-PC
+Windows System Event ID 7045 confirms that a service was installed.
+Sysmon Event ID 1 confirms the process and command line used to create the service.
 
-## Detection Logic
+Important indicators:
+sc.exe
+create
+Service_Name
+Service_File_Name
+Image
+CommandLine
+ParentImage
+User
+EventCode 7045
+EventCode 1
 
-This detection looks for new Windows service creation using two telemetry sources:
-
-1. **Windows System Event ID 7045**  
-   Confirms that a service was installed on the system.
-
-2. **Sysmon Event ID 1**  
-   Confirms process creation activity involving `sc.exe`.
-
-Windows services are commonly used for legitimate administration, but attackers may also create services for persistence, execution, privilege escalation, or lateral movement.
-
-## SPL Query
-
-```spl
+SPL Search
 index=endpoint host="Target-PC" ("EndpointInventorySvc" OR "sc.exe")
 | table _time EventCode EventID host ComputerName source Service_Name Service_File_Name Image CommandLine Account_Name User Message _raw
 | sort -_time
-```
 
-## Safe Attack Simulation
+Windows System Search
+index=endpoint host="Target-PC" EventCode=7045
+| table _time EventCode host ComputerName Service_Name Service_File_Name Account_Name Message _raw
+| sort -_time
 
-A harmless service named `EndpointInventorySvc` was created on Target-PC using `sc.exe`.
+Sysmon Process Search
+index=endpoint host="Target-PC" source="*Sysmon*" EventCode=1 "sc.exe"
+| table _time EventCode EventID host ComputerName Image CommandLine ParentImage User
+| sort -_time
+
+Safe Lab Simulation
+A harmless service named EndpointInventorySvc was created on Target-PC using sc.exe.
 
 Command used:
-
-```cmd
 sc.exe create EndpointInventorySvc binPath= "C:\Windows\System32\cmd.exe /c echo Endpoint inventory service check > C:\Windows\Temp\endpoint_inventory_service.txt" start= demand
-```
 
-The service name used was:
-
-```text
+Service name:
 EndpointInventorySvc
-```
 
-This service was created for detection validation only. It did not execute malware, download payloads, disable security controls, or establish malicious persistence.
+Cleanup command:
+sc.exe delete EndpointInventorySvc
 
-## Detection Result
+This test was safe.
+It did not execute malware.
+It did not download payloads.
+It did not disable security tools.
+It did not establish malicious persistence.
+It only created a benign service for detection validation.
 
-Splunk detected new service installation activity from Target-PC.
+Detection Result
+Splunk returned new service installation evidence from Target-PC.
 
-Evidence observed:
-
-```text
-Windows System Event ID: 7045
+Windows System showed:
+Event ID: 7045
 Message: A service was installed in the system
 Service Name: EndpointInventorySvc
 Service File Name: C:\Windows\System32\cmd.exe /c echo Endpoint inventory service check > C:\Windows\Temp\endpoint_inventory_service.txt
 Host: Target-PC
-```
 
-Sysmon also captured process creation activity involving:
-
-```text
-Image: C:\Windows\System32\sc.exe
+Sysmon showed:
 Event ID: 1
+Image: C:\Windows\System32\sc.exe
 CommandLine: sc.exe create EndpointInventorySvc ...
-```
 
-## Analyst Thought Process
+Analyst Review
+The first thing I checked was whether Windows recorded the service installation.
+Windows System Event ID 7045 confirmed that a new service was installed on Target-PC.
 
-### Initial Alert Meaning
+The next thing I checked was the process that created the service.
+Sysmon Event ID 1 showed sc.exe process creation and captured the command line.
 
-A new service was installed on an endpoint. In a real environment, this could be legitimate administrative activity or attacker behavior used for persistence, recurring execution, or privilege abuse.
+The service name alone is not enough to decide if the activity is malicious.
+The service binary path matters more.
 
-### Key Questions
+In this lab, the service action was benign and only wrote a text file to C:\Windows\Temp.
+In a real SOC investigation, I would check whether the service points to PowerShell, cmd, rundll32, regsvr32, a suspicious executable, a user-writable folder, or a remote path.
 
-- Which host installed the service?
-- Which user created the service?
-- What binary or command does the service execute?
-- Is the service name consistent with approved software or administration?
-- Was the service created during an approved change window?
-- Was `sc.exe` launched from an expected parent process?
-- Did the same host show suspicious PowerShell, downloads, credential access, Defender tampering, or event log clearing?
-- Was the service started after creation?
+Important fields:
+Host
+User
+Service_Name
+Service_File_Name
+Image
+CommandLine
+ParentImage
+Account_Name
+EventCode
+EventID
+_time
 
-### Evidence Reviewed
+Investigation Questions I would ask myself
 
-- Windows System Event ID 7045
-- Sysmon Event ID 1 process creation
-- Service name
-- Service file path
-- `sc.exe` command line
-- Hostname
-- User context
-- Raw event data
+1.Which host installed the service?
 
-## Analyst Investigation Summary
+2.Which user created the service?
 
-A service named `EndpointInventorySvc` was created on Target-PC using `sc.exe`. Windows System logs recorded Event ID `7045`, confirming that a service was installed. Sysmon also recorded Event ID `1`, showing process creation activity for `sc.exe`.
+3.What is the service name?
 
-The service action was benign and pointed to a simple command that writes text output to `C:\Windows\Temp\endpoint_inventory_service.txt`. The purpose of this test was to validate new service installation telemetry and detection logic in Splunk.
+4.What binary or command does the service run?
 
-In a real investigation, this activity would require validation of the service binary path, user context, parent process, timing, service start behavior, and surrounding endpoint activity.
+5.Where is the service binary located?
 
-## Severity
+6.Is the path normal for that service?
 
+7.Was the service started after creation?
+
+8.What account does the service run as?
+
+9.Was sc.exe launched from an expected parent process?
+
+10.Was the service created during an approved change window?
+
+11.Does the same service exist on other hosts?
+
+12.Did the same host show suspicious authentication activity?
+
+13.Did the same host show PowerShell downloads?
+
+14.Did the same host show Defender tampering?
+
+15.Did the same host show LSASS access?
+
+16.Was the Security log cleared after the service was created?
+
+Severity
 High
 
-New service installation can be high severity because attackers commonly create services for persistence, execution, privilege escalation, or lateral movement. Severity increases when the service binary runs from unusual paths, launches scripting engines, points to temporary directories, uses suspicious names, or appears after suspicious authentication activity.
+New service installation should be reviewed closely.
+Services can run with elevated privileges and can be abused for persistence or execution.
 
-## False Positive Considerations
+Keep High if:
+The service runs from Temp, Downloads, AppData, or another user-writable folder.
+The service launches PowerShell or cmd.
+The service name looks random or misleading.
+The service was created by an unexpected user.
+The service was created after suspicious logon activity.
+The service was created after a PowerShell download.
+The service was created after Defender tampering.
+The service starts immediately after creation.
+The same binary path appears on multiple hosts unexpectedly.
 
-- Authorized administrator activity
-- Software installation
-- Endpoint management tools
-- Patch management agents
-- Backup or monitoring agents
-- Security tool deployment
-- IT maintenance scripts
-- Lab-generated simulation activity
+False Positives
+Authorized administrator activity
+Software installation
+Endpoint management tools
+Patch management agents
+Backup agents
+Monitoring agents
+Security tool deployment
+IT maintenance scripts
+Lab validation
 
-This detection becomes more suspicious when paired with suspicious PowerShell, encoded commands, LSASS access, Defender tampering, scheduled task creation, or event log clearing.
+Tuning Notes
+This search is broad on purpose for lab validation.
+In production, I would tune based on the service name, binary path, signer, user, parent process, and whether the service is expected for that host.
 
-## Recommended Response
+Good tuning ideas:
+Allowlist approved software and management agents.
+Allowlist known security tools.
+Alert higher on services running from user-writable folders.
+Alert higher on services that launch PowerShell or cmd.
+Alert higher when service creation follows suspicious logons.
+Alert higher when service creation follows Defender tampering or LSASS access.
+Correlate Event ID 7045 with Sysmon Event ID 1.
+Correlate service creation with file creation and network activity.
 
-- Identify the affected host.
-- Identify the user who created the service.
-- Review the service name, binary path, start type, and account.
-- Determine whether the service creation was authorized.
-- Review the parent process and surrounding process activity.
-- Check whether the service was started.
-- Search for the same service name or binary path across the environment.
-- Review endpoint logs for related suspicious activity.
-- Stop and disable the service if confirmed malicious.
-- Isolate the host if the service appears connected to active compromise.
-- Preserve logs and document the timeline.
-- Escalate if persistence or lateral movement is suspected.
+Recommended Response to this alert:
+Identify the affected host.
+Identify the user who created the service.
+Review the service name.
+Review the service binary path.
+Review the service start type.
+Review the account the service runs as.
+Check whether the service was started.
+Check the parent process and command line.
+Determine whether the service was authorized.
+Search for the same service name across other hosts.
+Search for the same binary path across other hosts.
+Search for related PowerShell, downloads, LSASS access, Defender tampering, scheduled tasks, or event log clearing.
+Stop and disable the service if it is unauthorized.
+Delete the service if confirmed malicious.
+Isolate the host if the service appears connected to active compromise.
+Preserve logs and document the timeline.
 
-## Cleanup
+Validation Evidence
 
-After validation, the service was removed using:
+1.Service creation command and service query confirmation
+<img width="624" height="154" alt="12_service_creation_command" src="https://github.com/user-attachments/assets/57301e94-860e-4fad-919f-bcd91cdf5a9f" />
 
-```cmd
-sc.exe delete EndpointInventorySvc
-```
+2.Windows System Event ID 7045 showing new service installation
+<img width="624" height="175" alt="12_raw_7045_new_service_installed" src="https://github.com/user-attachments/assets/ceda9448-6a5f-4af5-b707-26f636faff8a" />
 
-## Validation Evidence
+3.Sysmon Event ID 1 showing sc.exe process creation
+<img width="624" height="230" alt="12_new_service_detection" src="https://github.com/user-attachments/assets/f791aa99-a3fa-4ce2-8a6e-125ebc0dff33" />
 
-| Evidence | Screenshot |
-|---|---|
-| Service creation command and service query confirmation | <img width="624" height="154" alt="12_service_creation_command" src="https://github.com/user-attachments/assets/57301e94-860e-4fad-919f-bcd91cdf5a9f" /> |
-| Windows System Event ID 7045 showing new service installation | <img width="624" height="175" alt="12_raw_7045_new_service_installed" src="https://github.com/user-attachments/assets/ceda9448-6a5f-4af5-b707-26f636faff8a" /> |
-| Sysmon Event ID 1 showing `sc.exe` process creation | <img width="624" height="230" alt="12_new_service_detection" src="https://github.com/user-attachments/assets/f791aa99-a3fa-4ce2-8a6e-125ebc0dff33" /> |
+Analyst Conclusion
+This detection confirmed new Windows service installation activity on Target-PC using Windows System Event ID 7045 and Sysmon Event ID 1.
 
-## Analyst Conclusion
+The lab service was intentionally harmless and only wrote a simple text file. The value of this detection is that it confirms visibility into both the service installation event and the process that created it.
 
-This detection successfully identified new Windows service installation activity using Windows System Event ID `7045` and Sysmon Event ID `1`. The lab safely simulated service creation using a benign service name and harmless service action.
-
-In my conclusion, new service installation is an important endpoint behavior to investigate because services can be used for legitimate administration or abused for persistence, execution, privilege escalation, and lateral movement. This detection validated that Windows System Event ID 7045 can confirm service installation, while Sysmon Event ID 1 can show the process and command line used to create it. In a real investigation, I would review the service name, binary path, user context, parent process, start type, and related endpoint activity to determine whether the activity was authorized or suspicious.
+In a real SOC investigation, I would not stop at the fact that a service was installed. I would review the service name, binary path, start type, user context, parent process, and surrounding endpoint activity. New services become much more suspicious when they run from user-writable folders, launch scripting tools, start immediately, or appear after suspicious authentication, download, credential access, or defense evasion activity.

@@ -1,142 +1,171 @@
-# Detection 06: Encoded PowerShell
+Detection 6 Encoded PowerShell
 
-## Objective
+Objective
+Detect PowerShell running with an encoded command.
 
-Detect encoded PowerShell execution using Sysmon process creation telemetry.
+This detection uses Sysmon process creation logs from Target-PC.
+The main event used for this detection is Sysmon Event ID 1.
 
-This detection identifies PowerShell commands using `-EncodedCommand`, which may indicate command obfuscation or suspicious script execution. In this lab, a safe encoded PowerShell command was executed on Target-PC and detected in Splunk using Sysmon Event ID `1`.
+Encoded PowerShell is not always malicious.
+It still needs to be reviewed because attackers often use it to hide command content.
 
-## MITRE ATT&CK Mapping
+Lab Setup
+Host: Target-PC
+SIEM: Splunk
+Log Source: Sysmon
+Event ID: 1
+Process: powershell.exe
 
-| Tactic | Technique | Evidence |
-|---|---|---|
-| Execution | T1059.001 - Command and Scripting Interpreter: PowerShell | `powershell.exe` executed with the `-EncodedCommand` argument. |
-| Defense Evasion | T1027 - Obfuscated Files or Information | The PowerShell command was Base64-encoded before execution. |
+MITRE ATT&CK
+Execution: T1059.001 - PowerShell
+Defense Evasion: T1027 - Obfuscated Files or Information
 
-## Log Source
+Detection Logic
+Look for PowerShell process creation events where the command line contains encoded execution flags.
 
-- Sysmon Operational Logs
-- Splunk Universal Forwarder
-- Sysmon Event ID 1
-- Host: Target-PC
+Common indicators:
+EncodedCommand
+-EncodedCommand
+-enc
+powershell.exe
+pwsh.exe
 
-## Detection Logic
-
-This detection looks for PowerShell process creation events where the command line contains encoded execution flags such as `EncodedCommand` or `-EncodedCommand`.
-
-Encoded PowerShell is not automatically malicious, but it is commonly used by attackers to hide command contents, bypass basic visibility, or execute obfuscated scripts. In this lab, the encoded command was safe and only printed a test message.
-
-## SPL Query
-
-```spl
-index=endpoint host="Target-PC" ("EncodedCommand" OR "-EncodedCommand")
-| table _time host ComputerName source EventCode EventID _raw
+SPL Search
+index=endpoint host="Target-PC" ("EncodedCommand" OR "-EncodedCommand" OR " -enc ")
+| table _time host ComputerName source EventCode EventID Image ParentImage CommandLine User
 | sort -_time
-```
 
-## Attack Simulation
-
+Safe Lab Simulation
 A safe encoded PowerShell command was executed on Target-PC.
 
-PowerShell commands used:
-
-```powershell
+PowerShell commands:
 $cmd = 'Write-Output "SOC Lab Encoded PowerShell Test"'
 $bytes = [System.Text.Encoding]::Unicode.GetBytes($cmd)
 $encoded = [Convert]::ToBase64String($bytes)
 powershell.exe -NoProfile -EncodedCommand $encoded
-```
 
 Expected output:
-
-```text
 SOC Lab Encoded PowerShell Test
-```
 
-This command did not download files, create persistence, disable security tools, or modify the system. It was used only to generate safe Sysmon telemetry for detection validation.
+This command was safe.
+It did not download files.
+It did not create persistence.
+It did not disable Defender.
+It did not modify the system.
+It was only used to generate Sysmon telemetry for the lab.
 
-## Detection Result
-
-Splunk detected Sysmon Event ID `1` from Target-PC showing `powershell.exe` executed with the `-EncodedCommand` argument.
+Detection Result
+Splunk returned a Sysmon Event ID 1 process creation event from Target-PC.
 
 The event showed:
-
-```text
 Host: Target-PC
 Source: Microsoft-Windows-Sysmon/Operational
 Event ID: 1
 Process: powershell.exe
-Command line: powershell.exe -NoProfile -EncodedCommand ...
-```
+Command line: powershell.exe -NoProfile -EncodedCommand
 
-## Analyst Thought Process
+Analyst Review
+The first thing I checked was whether the event was real process execution and not just a keyword match.
+Sysmon Event ID 1 confirmed that powershell.exe actually ran on Target-PC.
 
-### Initial Alert Meaning
+The important fields were:
+Host
+User
+Image
+ParentImage
+CommandLine
+EventID
+Source
 
-PowerShell executed with an encoded command. This may indicate suspicious or obfuscated command execution, especially if the encoded content is unknown or tied to other suspicious activity.
+The command line showed EncodedCommand, which means the actual PowerShell content was Base64 encoded.
+In a real investigation, the next step would be to decode the payload and review what it attempted to do.
 
-### Key Questions
+Investigation Questions I asked myself
 
-- Which host executed the encoded PowerShell command?
-- Which user ran the command?
-- What parent process launched PowerShell?
-- What was contained in the encoded command?
-- Did the command download or execute additional payloads?
-- Did this activity occur with other suspicious process or network events?
+1.What host ran PowerShell?
 
-### Evidence Reviewed
+2.What user ran the command?
 
-- Sysmon Event ID 1
-- Host: Target-PC
-- Process: powershell.exe
-- Command line containing `-EncodedCommand`
-- Safe decoded command output: `SOC Lab Encoded PowerShell Test`
+3.What parent process launched PowerShell?
 
-## Analyst Investigation Summary
+4.Was the encoded command decoded?
 
-I began by executing a safe encoded PowerShell command on Target-PC. The command only printed a test message and was used to generate detection telemetry.
+5.Did the decoded command download anything?
 
-After execution, I searched Splunk for Sysmon process creation events containing `EncodedCommand`. Splunk returned a Sysmon Event ID `1` event from Target-PC. The raw event showed that `powershell.exe` executed with the `-EncodedCommand` argument.
+6.Did it create a file?
 
-In a real SOC investigation, I would decode the Base64 payload to determine what the command attempted to do. I would also review the parent process, user context, network connections, file creation events, and any related PowerShell or Sysmon activity.
+7.Did it start another process?
 
-## Severity
+8.Did it connect to the network?
 
+9.Was there any follow on persistence
+
+Severity
 Medium
 
-Increase to High if the encoded command downloads files, executes remote content, disables security controls, creates persistence, or runs from an unusual parent process.
+Raise to High if:
+PowerShell was launched by Office, a browser, or an unknown process.
+The decoded command downloads remote content.
+The command disables Defender or logging.
+The command creates persistence.
+The command touches credentials or LSASS.
+The activity is tied to a suspicious user or host.
 
-## False Positive Considerations
+False Positives
+Admin scripts
+Software deployment tools
+Security testing
+Endpoint management tools
+Lab validation
+Automation jobs
 
-- Administrator automation
-- Software deployment scripts
-- Security testing
-- System management tools
-- Lab-generated validation activity
+Tuning Notes
+This search is broad on purpose for lab testing.
+In production, I would tune it by checking the parent process, user context, host role, and decoded payload.
 
-This detection becomes more suspicious when PowerShell is launched by Office applications, browsers, unknown executables, or when it is followed by network connections, file writes, or credential access behavior.
+Good tuning ideas:
+Allowlist approved admin scripts.
+Allowlist known software deployment tools.
+Alert higher when the parent process is suspicious.
+Alert higher when encoded PowerShell is followed by network connections.
+Alert higher when encoded PowerShell creates files or starts another process.
 
-## Recommended Response
+Recommended Response to this alert
 
-- Identify the host and user that executed the command.
-- Decode the Base64 PowerShell payload.
-- Review the parent process.
-- Check for network connections after execution.
-- Search for related file creation or process execution events.
-- Determine whether the command was authorized.
-- Isolate the host if malicious behavior is confirmed.
-- Document the decoded command and full timeline.
+1.Identify the host and user.
 
-## Validation Evidence
+2.Decode the Base64 payload.
 
-| Evidence | Screenshot |
-|---|---|
-| Safe encoded PowerShell command executed on Target-PC | <img width="624" height="125" alt="06_encoded_powershell_execution" src="https://github.com/user-attachments/assets/22cad9dc-9483-4dab-ac94-087b1fa61372" /> |
-| Raw Sysmon Event ID 1 showing encoded PowerShell activity | <img width="624" height="167" alt="06_raw_sysmon_eventid1_encoded_powershell" src="https://github.com/user-attachments/assets/8062e3dd-b649-4722-9124-bd65545d5ff6" /> |
-| Splunk detection showing EncodedCommand execution | <img width="624" height="170" alt="06_encoded_powershell_detection" src="https://github.com/user-attachments/assets/1797a798-9b2d-4b5a-8a74-182e575e0147" /> |
+3.Review the parent process.
 
-## Analyst Conclusion
+4.Check for network connections after execution.
 
-This detection successfully identified encoded PowerShell execution on Target-PC using Sysmon Event ID `1`. The command was intentionally safe and generated for lab validation, but the same detection logic can identify suspicious encoded PowerShell activity in a real SOC environment.
+5.Check for new files created after execution.
 
-Encoded PowerShell should be reviewed carefully because attackers often use it to hide command contents or execute obfuscated scripts. The next investigation steps would be to decode the payload, review the parent process, and check for related network, file, or persistence activity.
+6.Search for child processes launched by PowerShell.
+
+7.Review related Sysmon and Windows Security events.
+
+8.Confirm whether the activity was authorized.
+
+9.Isolate the host if malicious behavior is confirmed.
+
+10.Document the decoded command and timeline.
+
+Validation Evidence
+
+1.Safe encoded PowerShell command executed on Target-PC
+<img width="624" height="125" alt="06_encoded_powershell_execution" src="https://github.com/user-attachments/assets/22cad9dc-9483-4dab-ac94-087b1fa61372" />
+
+2.Raw Sysmon Event ID 1 showing encoded PowerShell activity
+<img width="624" height="167" alt="06_raw_sysmon_eventid1_encoded_powershell" src="https://github.com/user-attachments/assets/8062e3dd-b649-4722-9124-bd65545d5ff6" />
+
+3.Splunk detection showing EncodedCommand execution
+<img width="624" height="170" alt="06_encoded_powershell_detection" src="https://github.com/user-attachments/assets/1797a798-9b2d-4b5a-8a74-182e575e0147" />
+
+Analyst Conclusion
+This detection confirmed encoded PowerShell execution on Target-PC using Sysmon Event ID 1.
+
+The command used in the lab was intentionally safe, but the detection is still valuable because encoded PowerShell is commonly used to hide the real command being executed. The important part of the investigation is not just seeing EncodedCommand. The important part is decoding the payload, checking the parent process, and reviewing what happened after PowerShell ran.
+
+In this lab, Splunk showed the PowerShell process creation event and captured the encoded command in the command line. In a real SOC investigation, I would treat this as suspicious until the decoded command and surrounding activity proved it was authorized.

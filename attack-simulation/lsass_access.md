@@ -1,195 +1,137 @@
-Detection 8 LSASS Access / Credential Dumping Behavior
+# lsass access detection
 
-Objective
-Detect suspicious access to lsass.exe using Sysmon ProcessAccess telemetry.
+Description: Detecting suspicious access to lsass.exe using Sysmon ProcessAccess telemetry
 
-This detection uses Sysmon Event ID 10 from Target-PC.
-The goal is to identify when a process opens a handle to LSASS.
+# 🧠 LSASS Access Detection
 
-LSASS access is high risk because attackers often target LSASS memory for credential dumping.
-This lab did not dump credentials.
-This lab only generated safe ProcessAccess telemetry.
+<div align="center">
 
-Lab Setup
-Host: Target-PC
-SIEM: Splunk
-Log Source: Sysmon
-Event ID: 10
-Target Process: lsass.exe
-Source Process: powershell.exe
+![Log Source](https://img.shields.io/badge/Log%20Source-Sysmon-blue)
+![Event ID](https://img.shields.io/badge/Event%20ID-10-orange)
+![SIEM](https://img.shields.io/badge/SIEM-Splunk-green)
+![MITRE](https://img.shields.io/badge/MITRE-T1003.001-red)
+![Status](https://img.shields.io/badge/Status-Validated-brightgreen)
 
-MITRE ATT&CK
-Credential Access: T1003.001 - LSASS Memory
+</div>
 
-Detection Logic
-Look for Sysmon ProcessAccess events where the target process is lsass.exe.
+---
 
-Important fields:
-SourceImage
-TargetImage
-GrantedAccess
-CallTrace
-User
-Host
-EventID
+## 📋 Table of Contents
 
-Common suspicious source processes:
-powershell.exe
-cmd.exe
-rundll32.exe
-procdump.exe
-taskmgr.exe
-unknown executables
-tools running from temp folders
+* [Detection Summary](#-detection-summary)
+* [Lab Details](#-lab-details)
+* [MITRE ATT&CK Mapping](#-mitre-attck-mapping)
+* [Splunk Search](#-splunk-search)
+* [Simulation](#-simulation)
+* [Analyst Review](#-analyst-review)
+* [Severity](#-severity)
+* [False Positives](#-false-positives)
+* [Validation Evidence](#-validation-evidence)
+* [Conclusion](#-conclusion)
 
-SPL Search
-index=endpoint host="Target-PC" source="*Sysmon*" "lsass.exe"
-| table _time EventCode EventID host ComputerName SourceImage TargetImage GrantedAccess CallTrace User _raw
-| sort -_time
+---
 
-Stronger Search
+## 🎯 Detection Summary
+
+This detection identifies process access to `lsass.exe` using Sysmon Event ID `10`. I tested it on `Target-PC` by safely opening a handle to LSASS with PowerShell and validating the ProcessAccess event in Splunk. The goal was to confirm visibility into LSASS access behavior without dumping credentials or saving credential material.
+
+---
+
+## 🧪 Lab Details
+
+| Field          | Details          |
+| -------------- | ---------------- |
+| Host           | `Target-PC`      |
+| SIEM           | Splunk           |
+| Log Source     | Sysmon           |
+| Event ID       | `10`             |
+| Target Process | `lsass.exe`      |
+| Source Process | `powershell.exe` |
+| Splunk Index   | `endpoint`       |
+
+---
+
+## 🧭 MITRE ATT&CK Mapping
+
+| Tactic            | Technique              | Reason                                                |
+| ----------------- | ---------------------- | ----------------------------------------------------- |
+| Credential Access | T1003.001 LSASS Memory | LSASS access can indicate credential dumping behavior |
+
+---
+
+## 🔎 Splunk Search
+
+```spl
 index=endpoint host="Target-PC" source="*Sysmon*" EventCode=10
 | search TargetImage="*lsass.exe"
 | table _time host ComputerName User SourceImage TargetImage GrantedAccess CallTrace
 | sort -_time
+```
 
-Safe Lab Simulation
-A safe LSASS access simulation was performed on Target-PC using PowerShell.
+---
 
-PowerShell command:
+## ⚔️ Simulation
+
+A safe LSASS access simulation was performed on `Target-PC` using PowerShell.
+
+```powershell
 $p = [System.Diagnostics.Process]::GetProcessesByName("lsass")[0]
 $p.Handle
+```
 
-This opened a handle to the LSASS process.
-Sysmon generated Event ID 10 ProcessAccess telemetry.
+This opened a handle to the LSASS process and generated Sysmon Event ID `10`. This test did not dump LSASS memory, run Mimikatz, create a dump file, or extract credentials.
 
-This test was safe.
-It did not dump LSASS memory.
-It did not create a dump file.
-It did not run Mimikatz.
-It did not extract credentials.
-It did not save credential material.
-It was only used to validate Sysmon ProcessAccess logging.
+---
 
-Detection Result
-Splunk returned a Sysmon Event ID 10 event from Target-PC.
+## 🕵️ Analyst Review
 
-The event showed:
-Host: Target-PC
-Source: Microsoft-Windows-Sysmon/Operational
-Event ID: 10
-SourceImage: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
-TargetImage: C:\Windows\System32\lsass.exe
+LSASS access is high risk because attackers often target LSASS memory to steal credentials. In this lab, PowerShell accessed `lsass.exe`, and Splunk captured the behavior through Sysmon ProcessAccess telemetry.
 
-Analyst Review
-The first thing I checked was whether the event showed real process access to LSASS.
-Sysmon Event ID 10 confirmed that a source process accessed lsass.exe.
+The main investigation points are the source process, user context, `GrantedAccess` value, `CallTrace`, and surrounding activity. In a real investigation, I would check whether a dump file was created, whether the source process was unusual, and whether the activity happened after suspicious logon activity.
 
-The source process was PowerShell.
-That matters because PowerShell accessing LSASS is not something I would treat as normal without more context.
+---
 
-The most important fields were:
-SourceImage
-TargetImage
-GrantedAccess
-CallTrace
-User
-Host
-ComputerName
-EventID
+## 🚦 Severity
 
-In a real SOC investigation, I would review the GrantedAccess value and CallTrace to understand the type of access requested.
-I would also check whether the same host created a dump file or launched any known credential dumping tools.
+| Severity | Condition                                                      |
+| -------- | -------------------------------------------------------------- |
+| High     | PowerShell or another unusual process accesses LSASS           |
+| High     | Credential dumping tool accesses LSASS                         |
+| High     | Dump file is created after LSASS access                        |
+| High     | Source process runs from Temp, Downloads, or AppData           |
+| High     | Activity follows suspicious logon or privilege change activity |
 
-Investigation Questions I asked myself
+---
 
-1.What process accessed LSASS?
+## ⚠️ False Positives
 
-2.What user context was involved?
+| Possible Cause        | Notes                                            |
+| --------------------- | ------------------------------------------------ |
+| Antivirus tools       | Security products may access LSASS               |
+| EDR tools             | Monitoring tools may inspect LSASS               |
+| Backup tools          | Some trusted tools may touch sensitive processes |
+| Admin troubleshooting | Administrator investigation or testing           |
+| Lab testing           | Expected activity from this detection test       |
 
-3.Was the source process expected?
+---
 
-4.Was the source process signed and in a normal path?
+## 📸 Validation Evidence
 
-5.What level of access was requested?
+### Safe PowerShell LSASS Access Simulation
 
-6.Was a dump file created?
-
-7.Was there related process creation activity?
-
-8.Was there related file creation activity?
-
-9.Did this happen after a successful suspicious logon?
-
-10.Did the same user make privileged group changes?
-
-11.Was there lateral movement after this event?
-
-Severity
-High
-
-LSASS access should be reviewed quickly.
-Raise priority when the source process is unusual, user-launched, running from a temporary folder, or tied to other suspicious activity.
-
-Keep High if:
-PowerShell accessed LSASS.
-A credential dumping tool accessed LSASS.
-A dump file was created.
-The source process came from Downloads, Temp, or AppData.
-The activity happened after suspicious logon activity.
-The host also shows persistence or lateral movement.
-
-False Positives
-Antivirus tools
-EDR tools
-Security monitoring software
-Backup tools
-Legitimate system processes
-Administrator troubleshooting
-Lab validation
-
-Tuning Notes
-This search is broad on purpose for lab validation.
-In production, I would tune by source process, signer, file path, GrantedAccess, and known security tool behavior.
-
-Good tuning ideas:
-Allowlist approved EDR and antivirus processes.
-Alert higher on PowerShell or command-line tools accessing LSASS.
-Alert higher on processes running from Temp, Downloads, or AppData.
-Correlate LSASS access with file creation events.
-Correlate LSASS access with recent successful logons.
-Correlate LSASS access with privileged group changes.
-Correlate LSASS access with outbound network connections.
-
-Recommended Response to this alert:
-Identify the source process.
-Identify the user and host.
-Review the parent process and command line.
-Check the process path and file reputation.
-Review GrantedAccess and CallTrace.
-Search for dump file creation.
-Review Sysmon Event ID 1 process creation events.
-Review Sysmon Event ID 11 file creation events if available.
-Check for successful logons before the LSASS access.
-Check for privileged group changes or lateral movement.
-Isolate the host if credential dumping is suspected.
-Reset credentials if compromise is confirmed.
-Document the full timeline.
-
-Validation Evidence
-
-1.Safe PowerShell LSASS access simulation
 <img width="624" height="40" alt="08_safe_lsass_access_simulation" src="https://github.com/user-attachments/assets/166816e9-365d-49d6-a40c-b0bdfcecca42" />
 
-2.Raw Sysmon Event ID 10 showing ProcessAccess to LSASS
+### Raw Sysmon Event ID 10 Showing ProcessAccess to LSASS
+
 <img width="624" height="262" alt="08_raw_sysmon_eventid10_lsass_access" src="https://github.com/user-attachments/assets/1982257e-534f-4c9e-982a-2e75fad0b5af" />
 
-3.Splunk detection showing LSASS access behavior
+### Splunk Detection Showing LSASS Access Behavior
+
 <img width="624" height="40" alt="08_safe_lsass_access_simulation" src="https://github.com/user-attachments/assets/beea1e96-f2fd-4ca3-8f34-da5a4af1ff0c" />
 
-Analyst Conclusion
-This detection confirmed process access to lsass.exe on Target-PC using Sysmon Event ID 10.
+---
 
-The lab simulation was intentionally safe and did not dump credentials. The value of this detection is that it confirms visibility into LSASS ProcessAccess activity, which is one of the behaviors analysts watch for during credential dumping investigations.
+## ✅ Conclusion
 
-In this lab, PowerShell opened a handle to LSASS and Splunk captured the event. In a real SOC investigation, I would treat this as high risk until the source process, user context, GrantedAccess value, and surrounding activity proved it was expected. The next step would be to look for dump file creation, suspicious child processes, recent successful logons, and any follow-on activity that could indicate credential theft or lateral movement.
+This detection confirmed process access to `lsass.exe` on `Target-PC` using Sysmon Event ID `10`. The lab simulation was safe and did not dump credentials, but the behavior is important because LSASS access is commonly reviewed during credential dumping investigations. In a real SOC investigation, I would review the source process, user context, `GrantedAccess`, `CallTrace`, dump file creation, recent logons, and any follow-on activity that could indicate credential theft or lateral movement.
+

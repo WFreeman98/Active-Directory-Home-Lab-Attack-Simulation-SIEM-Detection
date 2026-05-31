@@ -1,66 +1,71 @@
-Detection 2 Successful Login After Failures
+# successful login after failures detection
 
-Purpose
+Description: Detecting repeated failed RDP logons followed by a successful logon from the same source IP and user
 
-Detect repeated failed RDP logons that are followed by a successful logon from the same source IP and same user.
+# ✅ Successful Login After Failures Detection
 
-This is more serious than failed logons by themselves.
-Failed logons can be noise.
-Failed logons followed by success can mean the password was guessed or valid credentials were used.
+<div align="center">
 
-Lab Details
+![Log Source](https://img.shields.io/badge/Log%20Source-Windows%20Security-blue)
+![Event IDs](https://img.shields.io/badge/Event%20IDs-4625%20%7C%204624-orange)
+![SIEM](https://img.shields.io/badge/SIEM-Splunk-green)
+![MITRE](https://img.shields.io/badge/MITRE-T1110%20%7C%20T1078%20%7C%20T1021.001-red)
+![Status](https://img.shields.io/badge/Status-Validated-brightgreen)
 
-Target host: Target-PC
-Domain: CORP
-User tested: bwaltz
-Source IP: 192.168.10.250
-Attacker system: Kali Linux
-Log source: Windows Security logs
-SIEM: Splunk
-Index: endpoint
+</div>
 
-Events codes looked for
+---
 
-4625 Failed logon
-4624 Successful logon
+## 📋 Table of Contents
 
-Logon Types Watched
+* [Detection Summary](#-detection-summary)
+* [Test Details](#-test-details)
+* [MITRE ATT&CK Mapping](#-mitre-attck-mapping)
+* [Splunk Search](#-splunk-search)
+* [Attack Simulation](#-attack-simulation)
+* [Analyst Review](#-analyst-review)
+* [Severity](#-severity)
+* [False Positives](#-false-positives)
+* [Validation Evidence](#-validation-evidence)
+* [Conclusion](#-conclusion)
 
-Logon Type 3
-Network logon
-Seen during RDP/NLA failed authentication in this lab.
+---
 
-Logon Type 10
-RemoteInteractive logon
-Seen during the successful RDP session in this lab.
+## 🎯 Detection Summary
 
-MITRE Mapping
+This detection identifies repeated failed RDP logons followed by a successful logon from the same source IP and same user. This is more serious than failed logons alone because it may indicate that a password was guessed or valid credentials were used. I tested this by generating failed RDP attempts from Kali against `bwaltz`, then completing a successful RDP login from the same Kali machine.
 
-T1110 Brute Force
-Repeated failed logons were generated against the same domain user.
+---
 
-T1078 Valid Accounts
-A successful logon happened after the failed attempts.
+## 🧪 Test Details
 
-T1021.001 Remote Services RDP
-The authentication activity was tied to RDP access against the workstation.
+| Field           | Details                                      |
+| --------------- | -------------------------------------------- |
+| Target Host     | `Target-PC`                                  |
+| Domain          | `CORP`                                       |
+| User Tested     | `bwaltz`                                     |
+| Source IP       | `192.168.10.250`                             |
+| Attacker System | Kali Linux                                   |
+| Log Source      | Windows Security logs                        |
+| SIEM            | Splunk                                       |
+| Index           | `endpoint`                                   |
+| Event IDs       | `4625` failed logon, `4624` successful logon |
 
-Attack Simulation
+---
 
-Failed RDP attempts from Kali
+## 🧭 MITRE ATT&CK Mapping
 
-hydra -l bwaltz -P passwords_wrong.txt rdp://192.168.10.100 -V -t 1
+| Tactic                        | Technique                         | Reason                                                             |
+| ----------------------------- | --------------------------------- | ------------------------------------------------------------------ |
+| Credential Access             | T1110 Brute Force                 | Repeated failed logons were generated against the same domain user |
+| Defense Evasion / Persistence | T1078 Valid Accounts              | A successful logon happened after the failed attempts              |
+| Lateral Movement              | T1021.001 Remote Desktop Protocol | Authentication activity was tied to RDP access                     |
 
-After the failed attempts, I made a successful RDP login from the same Kali machine.
+---
 
-Successful RDP login
+## 🔎 Splunk Search
 
-xfreerdp /v:192.168.10.100 /d:CORP /u:bwaltz /cert:ignore
-
-The working password was not placed in the documentation.
-
-Splunk Search
-
+```spl
 index=endpoint host="Target-PC" (EventCode=4625 OR EventCode=4624) (TargetUserName="bwaltz" OR Account_Name="bwaltz")
 | where Source_Network_Address="192.168.10.250"
 | eval user=coalesce(TargetUserName, Account_Name)
@@ -70,150 +75,83 @@ index=endpoint host="Target-PC" (EventCode=4625 OR EventCode=4624) (TargetUserNa
 | where failure_count >= 5 AND success_count >= 1 AND first_success > first_failure
 | convert ctime(first_failure) ctime(last_failure) ctime(first_success)
 | sort -failure_count
+```
 
-What The Search Does
+---
 
-Looks for 4625 and 4624 events on Target-PC.
-Filters to the test user bwaltz.
-Filters to the Kali source IP.
-Counts failed logons and successful logons.
-Keeps only activity where failures happened before success.
-Shows the first failure time, last failure time, and first successful login time.
+## ⚔️ Attack Simulation
 
-Why This Matters
+Failed RDP attempts were generated from Kali using Hydra.
 
-A normal brute force alert only proves that authentication failed.
-This detection checks whether the activity turned into a successful login.
+```bash
+hydra -l bwaltz -P passwords_wrong.txt rdp://192.168.10.100 -V -t 1
+```
 
-That changes the investigation.
-At that point I would stop treating it like only attempted access and start checking for possible account compromise.
+After the failed attempts, I made a successful RDP login from the same Kali machine.
 
-Fields I Checked
+```bash
+xfreerdp /v:192.168.10.100 /d:CORP /u:bwaltz /cert:ignore
+```
 
-1.EventCode
+The working password was not included in the documentation.
 
-2.TargetUserName
+---
 
-3.Account Name
+## 🕵️ Analyst Review
 
-4.Source Network Address
+The search showed repeated failed logons for `bwaltz` from `192.168.10.250`, followed by successful logon activity for the same user and source IP. The failed attempts appeared as `Logon Type 3`, and the successful RDP session appeared as `Logon Type 10`.
 
-5.Logon Type
+This matters because a normal brute force alert only proves that authentication failed. When a successful login happens after the failures, the investigation should shift from attempted access to possible account compromise.
 
-6.ComputerName
+### Follow-Up Search
 
-7.host
-
-8.time
-
-Result
-
-The search showed repeated failed logons for bwaltz from 192.168.10.250.
-The same source IP later generated successful logon activity for the same user.
-
-The failed attempts appeared as Logon Type 3.
-The successful RDP session appeared as Logon Type 10.
-
-This matched the behavior I expected from the lab.
-
-Analyst Checks
-
-Confirm the source IP.
-Confirm the targeted user.
-Confirm the successful logon happened after the failures.
-Check whether the source IP is normal for that user.
-Check whether the login happened outside normal hours.
-Check whether the same source IP hit other users.
-Check whether the same user had failures from other IPs.
-Check for post-login activity.
-
-Follow Up Searches
-
-Successful logons from same source
-
+```spl
 index=endpoint host="Target-PC" EventCode=4624
 | search Source_Network_Address="192.168.10.250"
 | table _time host ComputerName Account_Name TargetUserName Source_Network_Address Logon_Type
 | sort -_time
+```
 
-Other users targeted by same source
+---
 
-index=endpoint EventCode=4625 Source_Network_Address="192.168.10.250"
-| stats count by Account_Name TargetUserName host ComputerName Logon_Type
-| sort -count
+## 🚦 Severity
 
-Post login PowerShell activity
+| Severity | Reason                                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------------- |
+| High     | Same source IP had repeated failed logons and later authenticated successfully as the same user               |
+| Medium   | Keep as medium only if the activity is confirmed as normal user behavior                                      |
+| High     | Treat as high if the source IP is unusual, the login is unexpected, or suspicious post-login activity appears |
 
-index=endpoint host="Target-PC" source="*Sysmon*" ("powershell.exe" OR "pwsh.exe")
-| table _time host Image CommandLine ParentImage User EventCode EventID
-| sort -_time
+---
 
-Account or group changes after login
+## ⚠️ False Positives
 
-index=endpoint (EventCode=4720 OR EventCode=4728 OR EventCode=4732)
-| table _time host ComputerName Subject_Account_Name Target_Account_Name Group_Name EventCode
-| sort -_time
+| Possible Cause    | Notes                                                             |
+| ----------------- | ----------------------------------------------------------------- |
+| User error        | User typed the wrong password several times and then got it right |
+| Help desk testing | Admin or support testing authentication                           |
+| Old credentials   | Saved RDP credentials were outdated and then corrected            |
+| Password change   | User recently changed their password                              |
+| Lab testing       | Expected activity from this detection test                        |
 
-Severity
+---
 
-High
+## 📸 Validation Evidence
 
-Reason:
-The same source IP had repeated failed authentication attempts and later authenticated successfully as the same user.
-
-Keep as Medium if it is confirmed to be normal user behavior.
-Treat as High if the source IP is unusual, the login is unexpected, or post-login activity appears suspicious.
-
-False Positives
-
-User typed the wrong password several times and then got it right.
-Help desk or admin testing.
-Saved RDP credentials were outdated and then corrected.
-Lab testing.
-A user recently changed their password.
-Automated process tried old credentials before a real login.
-
-Tuning Notes
-
-This detection is intentionally strict on source IP and user so the alert is easier to validate in the lab.
-
-In production I would tune it by:
-requiring a higher failure count
-using a short time window
-excluding known admin jump boxes
-excluding approved vulnerability scanners
-adding known business hours context
-checking whether the source IP is normal for the user
-correlating with endpoint process activity after success
-
-Response Notes
-
-Confirm whether bwaltz was expected to log in from 192.168.10.250.
-Review the timeline of failed and successful logons.
-Check for PowerShell, new services, scheduled tasks, new accounts, or group changes after the success.
-Reset the account password if compromise is suspected.
-Restrict RDP access if it is exposed too broadly.
-Add MFA where possible.
-Document the timeline and evidence.
-
-Screenshot Evidence
-
-1.Hydra failed RDP attempts from Kali
+### Hydra Failed RDP Attempts from Kali
 
 <img width="624" height="457" alt="02_hydra_failures" src="https://github.com/user-attachments/assets/4a5c1002-a465-4011-97af-fb280d5619c6" />
 
-2.Raw Splunk timeline showing 4625 failures followed by 4624 success
+### Raw Splunk Timeline Showing 4625 Failures Followed by 4624 Success
 
 <img width="624" height="299" alt="02_raw_4625_4624_events" src="https://github.com/user-attachments/assets/6525d5ea-80a1-422f-92be-101a6c202894" />
 
-3.Splunk correlation showing successful login after failures
+### Splunk Correlation Showing Successful Login After Failures
 
 <img width="624" height="246" alt="02_successful_login_after_failures_detection" src="https://github.com/user-attachments/assets/f797905a-b5db-4f0c-b16c-ba6c8dfb8d95" />
 
-Conclusion
+---
 
-This test proved I can reliably catch a brute force attempt that ends in a compromise.
+## ✅ Conclusion
 
-The lab telemetry showed exactly what I wanted to see the Kali box generated a string of RDP failures against the bwaltz account, followed immediately by a successful logon.
-
-From an analyst perspective, this is the exact moment an alert turns from routine noise into an actual incident. Standard failed logons happen all day, but seeing a success right after a spike in failures means an attacker likely guessed the password or used valid credentials. The investigation has to pivot immediately from monitoring a scanning tool to tracking live post compromise activity on Target-PC.
+This detection successfully identified repeated failed RDP logons followed by a successful login for `bwaltz` from `192.168.10.250`. From an analyst perspective, this is the point where failed logon activity becomes more serious because the attacker may have guessed the password or used valid credentials. The next step would be to review post-login activity on `Target-PC`, including PowerShell execution, new services, scheduled tasks, account creation, and group changes.

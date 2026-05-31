@@ -1,170 +1,138 @@
-Detection 9 Event Log Clearing
+# event log clearing detection
 
-Objective
-Detect Windows Security event log clearing activity.
+Description: Detecting Windows Security log clearing using Event ID 1102
 
-This detection uses Windows Security Event ID 1102 from Target-PC.
-Event ID 1102 is generated when the Security audit log is cleared.
+# 🧹 Event Log Clearing Detection
 
-Security log clearing is high risk because it can remove evidence of failed logons, successful logons, account changes, privilege changes, PowerShell activity, and other attacker behavior.
+<div align="center">
 
-Lab Setup
-Host: Target-PC
-SIEM: Splunk
-Log Source: Windows Security
-Event ID: 1102
-Tool Used: wevtutil
+![Log Source](https://img.shields.io/badge/Log%20Source-Windows%20Security-blue)
+![Event ID](https://img.shields.io/badge/Event%20ID-1102-orange)
+![SIEM](https://img.shields.io/badge/SIEM-Splunk-green)
+![MITRE](https://img.shields.io/badge/MITRE-T1070.001-red)
+![Status](https://img.shields.io/badge/Status-Validated-brightgreen)
 
-MITRE ATT&CK
-Defense Evasion: T1070.001 - Clear Windows Event Logs
+</div>
 
-Detection Logic
-Look for Windows Security Event ID 1102.
+---
 
-This event should be rare in normal activity.
-In a real environment, clearing the Security log should be reviewed immediately unless there is a known administrative reason.
+## 📋 Table of Contents
 
-Important fields:
-EventCode
-host
-ComputerName
-Account_Name
-Message
-_time
+* [Detection Summary](#-detection-summary)
+* [Lab Details](#-lab-details)
+* [MITRE ATT&CK Mapping](#-mitre-attck-mapping)
+* [Splunk Search](#-splunk-search)
+* [Simulation](#-simulation)
+* [Analyst Review](#-analyst-review)
+* [Severity](#-severity)
+* [False Positives](#-false-positives)
+* [Validation Evidence](#-validation-evidence)
+* [Conclusion](#-conclusion)
 
-SPL Search
+---
+
+## 🎯 Detection Summary
+
+This detection identifies Windows Security log clearing activity using Event ID `1102`. I tested it on `Target-PC` by clearing the Security log with `wevtutil` and validating the event in Splunk. This matters because clearing the Security log can remove evidence of failed logons, successful logons, account changes, privilege changes, and other suspicious activity.
+
+---
+
+## 🧪 Lab Details
+
+| Field        | Details          |
+| ------------ | ---------------- |
+| Host         | `Target-PC`      |
+| SIEM         | Splunk           |
+| Log Source   | Windows Security |
+| Event ID     | `1102`           |
+| Tool Used    | `wevtutil`       |
+| Splunk Index | `endpoint`       |
+
+---
+
+## 🧭 MITRE ATT&CK Mapping
+
+| Tactic          | Technique                          | Reason                                           |
+| --------------- | ---------------------------------- | ------------------------------------------------ |
+| Defense Evasion | T1070.001 Clear Windows Event Logs | Clearing logs can hide earlier attacker activity |
+
+---
+
+## 🔎 Splunk Search
+
+```spl
 index=endpoint host="Target-PC" EventCode=1102
 | table _time EventCode host ComputerName Account_Name Message
 | sort -_time
+```
 
-Broader Search
-index=endpoint EventCode=1102
-| table _time EventCode host ComputerName Account_Name Message
-| sort -_time
+---
 
-Safe Lab Simulation
-The Windows Security log was cleared on Target-PC using an administrator command prompt.
+## ⚔️ Simulation
 
-Command used:
+The Windows Security log was cleared on `Target-PC` using an administrator command prompt.
+
+```cmd
 wevtutil cl Security
+```
 
 Confirmation command:
+
+```cmd
 echo Security log clear test completed
+```
 
-This generated Windows Security Event ID 1102.
+This generated Windows Security Event ID `1102`. Centralized logging in Splunk preserved the evidence even after the local Security log was cleared.
 
-This test was controlled.
-It was performed in a lab.
-It was only used to validate log clearing detection.
-Centralized Splunk logging preserved the evidence even after the local Security log was cleared.
+---
 
-Detection Result
-Splunk returned Windows Security Event ID 1102 from Target-PC.
+## 🕵️ Analyst Review
 
-The event showed:
-Event ID: 1102
-Host: Target-PC
-ComputerName: Target-PC.corp.local
-Account Name: Administrator
-Message: The audit log was cleared.
+Splunk showed Event ID `1102` from `Target-PC`, with the message showing that the audit log was cleared. The event showed `Administrator` as the account associated with the clearing activity.
 
-Analyst Review
-The first thing I checked was whether the log clearing event came from the expected host.
-Splunk showed Event ID 1102 from Target-PC.
+The event itself confirms that the Security log was cleared, but it does not explain why. The most important investigation step is to review what happened before the clearing event. I would look for failed logons, successful remote logons, account creation, privileged group changes, PowerShell activity, scheduled tasks, services, or other activity that may have been hidden.
 
-The next thing I checked was the account tied to the event.
-The event showed Administrator as the account associated with the clearing activity.
+---
 
-This matters because Security log clearing can be used after suspicious activity to hide evidence.
-The event itself tells me the log was cleared, but it does not answer why it was cleared.
-That is why the timeline before the event matters more than the event by itself.
+## 🚦 Severity
 
-Investigation Questions I would ask myself
-1.Which host had the Security log cleared?
+| Severity | Condition                                                          |
+| -------- | ------------------------------------------------------------------ |
+| High     | Security log was cleared                                           |
+| High     | Event happened after failed or successful remote logons            |
+| High     | Event happened after account creation or group changes             |
+| High     | Event happened after suspicious PowerShell or persistence activity |
+| High     | Account that cleared the log is unusual or unexpected              |
 
-2.Which account cleared the log?
+---
 
-3.Was the account expected to perform this action?
+## ⚠️ False Positives
 
-4.Was this approved maintenance?
+| Possible Cause     | Notes                                      |
+| ------------------ | ------------------------------------------ |
+| Admin maintenance  | Approved troubleshooting or cleanup        |
+| Security testing   | Authorized internal testing                |
+| Lab testing        | Expected activity from this detection test |
+| Approved procedure | Documented log cleanup process             |
 
-5.What happened before the log was cleared?
+---
 
-6.Were there failed logons before the event?
+## 📸 Validation Evidence
 
-7.Were there successful remote logons before the event?
+### wevtutil Command Clearing the Security Log on Target-PC
 
-8.Were there account creations before the event?
-
-9.Were there privileged group changes before the event?
-
-10.Was PowerShell used before the event?
-
-11.Were scheduled tasks or services created before the event?
-
-12.Did the same account perform other administrative actions?
-
-Severity
-High
-
-Security log clearing should be treated as high severity unless it is confirmed to be authorized.
-
-Keep High if:
-The action happened after failed logons.
-The action happened after successful remote access.
-The action happened after account creation.
-The action happened after privileged group changes.
-The action happened after suspicious PowerShell.
-The account that cleared the log is unusual.
-The clearing happened outside normal maintenance windows.
-
-False Positives
-Authorized administrator maintenance
-System troubleshooting
-Security team testing
-Lab validation
-Approved log cleanup procedures
-
-Tuning Notes
-This detection should not be tuned out too aggressively.
-Event ID 1102 is important because Security log clearing is uncommon and high value.
-
-Good tuning ideas:
-Track which admins are allowed to clear logs.
-Compare the event time to approved maintenance windows.
-Correlate with authentication events before the clearing.
-Correlate with account management events before the clearing.
-Correlate with PowerShell and process creation events before the clearing.
-Alert higher when the event follows suspicious activity.
-
-Recommended Response to this alert:
-Identify the host where the Security log was cleared.
-Identify the account that cleared the log.
-Confirm whether the action was authorized.
-Review activity before the clearing event.
-Search for failed logons before the event.
-Search for successful logons before the event.
-Search for account creation or privileged group changes.
-Search for PowerShell, scheduled tasks, services, and persistence activity.
-Preserve available logs from Splunk or other centralized logging.
-Isolate the host if malicious activity is suspected.
-Reset credentials if account compromise is suspected.
-Document the full timeline.
-
-Validation Evidence
-
-1.wevtutil command clearing the Security log on Target-PC
 <img width="566" height="151" alt="09_wevtutil_clear_security_log" src="https://github.com/user-attachments/assets/cbbfb315-d0df-4063-a97e-afcde1f0d8e1" />
 
-2.Raw Windows Event ID 1102 showing Security log cleared
+### Raw Windows Event ID 1102 Showing Security Log Cleared
+
 <img width="624" height="342" alt="09_raw_1102_security_log_cleared" src="https://github.com/user-attachments/assets/03281f6c-b854-4dc6-b81b-fab7d499ec8a" />
 
-3.Splunk detection showing Event ID 1102 log clearing activity
+### Splunk Detection Showing Event ID 1102 Log Clearing Activity
+
 <img width="624" height="181" alt="09_event_log_clearing_detection" src="https://github.com/user-attachments/assets/aac624b3-7bb6-4784-bfa3-045766d045f7" />
 
-Analyst Conclusion
-This detection confirmed Windows Security log clearing on Target-PC using Event ID 1102.
+---
 
-The lab action was performed with wevtutil cl Security, and Splunk captured the event showing that the audit log was cleared. This is an important detection because clearing the Security log can be used to hide earlier attacker activity.
+## ✅ Conclusion
 
-In a real SOC investigation, I would not treat the log clearing event as the full story. I would build a timeline before the clearing event and look for failed logons, successful remote logons, account creation, privileged group changes, suspicious PowerShell, scheduled tasks, service creation, or other activity the user may have tried to hide. Centralized logging is important here because the local logs may be cleared, but the SIEM can still preserve evidence.
+This detection confirmed Windows Security log clearing on `Target-PC` using Event ID `1102`. The lab action was performed with `wevtutil cl Security`, and Splunk captured the event showing that the audit log was cleared. In a real SOC investigation, I would build a timeline before the clearing event and review authentication activity, account changes, PowerShell execution, scheduled tasks, services, and other activity that may have been hidden.

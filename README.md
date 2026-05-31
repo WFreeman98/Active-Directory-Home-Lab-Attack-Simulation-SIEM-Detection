@@ -1,4 +1,4 @@
-# active-directory-siem-detection-lab
+# active directory siem detection lab
 
 Description: Active Directory attack simulation and Splunk SIEM detection lab
 

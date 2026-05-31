@@ -1,171 +1,144 @@
-Detection 6 Encoded PowerShell
+# encoded powershell detection
 
-Objective
-Detect PowerShell running with an encoded command.
+Description: Detecting PowerShell execution with encoded command arguments using Sysmon Event ID 1
 
-This detection uses Sysmon process creation logs from Target-PC.
-The main event used for this detection is Sysmon Event ID 1.
+# ⚡ Encoded PowerShell Detection
 
-Encoded PowerShell is not always malicious.
-It still needs to be reviewed because attackers often use it to hide command content.
+<div align="center">
 
-Lab Setup
-Host: Target-PC
-SIEM: Splunk
-Log Source: Sysmon
-Event ID: 1
-Process: powershell.exe
+![Log Source](https://img.shields.io/badge/Log%20Source-Sysmon-blue)
+![Event ID](https://img.shields.io/badge/Event%20ID-1-orange)
+![SIEM](https://img.shields.io/badge/SIEM-Splunk-green)
+![MITRE](https://img.shields.io/badge/MITRE-T1059.001%20%7C%20T1027-red)
+![Status](https://img.shields.io/badge/Status-Validated-brightgreen)
 
-MITRE ATT&CK
-Execution: T1059.001 - PowerShell
-Defense Evasion: T1027 - Obfuscated Files or Information
+</div>
 
-Detection Logic
-Look for PowerShell process creation events where the command line contains encoded execution flags.
+---
 
-Common indicators:
-EncodedCommand
--EncodedCommand
--enc
-powershell.exe
-pwsh.exe
+## 📋 Table of Contents
 
-SPL Search
+* [Detection Summary](#-detection-summary)
+* [Lab Details](#-lab-details)
+* [MITRE ATT&CK Mapping](#-mitre-attck-mapping)
+* [Splunk Search](#-splunk-search)
+* [Simulation](#-simulation)
+* [Analyst Review](#-analyst-review)
+* [Severity](#-severity)
+* [False Positives](#-false-positives)
+* [Validation Evidence](#-validation-evidence)
+* [Conclusion](#-conclusion)
+
+---
+
+## 🎯 Detection Summary
+
+This detection identifies PowerShell running with encoded command arguments. I tested it on `Target-PC` using a safe encoded PowerShell command and validated the process creation event in Splunk. The goal was to confirm that Sysmon Event ID `1` captured the PowerShell execution and command line.
+
+---
+
+## 🧪 Lab Details
+
+| Field        | Details          |
+| ------------ | ---------------- |
+| Host         | `Target-PC`      |
+| SIEM         | Splunk           |
+| Log Source   | Sysmon           |
+| Event ID     | `1`              |
+| Process      | `powershell.exe` |
+| Splunk Index | `endpoint`       |
+
+---
+
+## 🧭 MITRE ATT&CK Mapping
+
+| Tactic          | Technique                             | Reason                                   |
+| --------------- | ------------------------------------- | ---------------------------------------- |
+| Execution       | T1059.001 PowerShell                  | PowerShell was used to execute a command |
+| Defense Evasion | T1027 Obfuscated Files or Information | The command content was Base64 encoded   |
+
+---
+
+## 🔎 Splunk Search
+
+```spl
 index=endpoint host="Target-PC" ("EncodedCommand" OR "-EncodedCommand" OR " -enc ")
 | table _time host ComputerName source EventCode EventID Image ParentImage CommandLine User
 | sort -_time
+```
 
-Safe Lab Simulation
-A safe encoded PowerShell command was executed on Target-PC.
+---
 
-PowerShell commands:
+## ⚔️ Simulation
+
+A safe encoded PowerShell command was executed on `Target-PC`.
+
+```powershell
 $cmd = 'Write-Output "SOC Lab Encoded PowerShell Test"'
 $bytes = [System.Text.Encoding]::Unicode.GetBytes($cmd)
 $encoded = [Convert]::ToBase64String($bytes)
 powershell.exe -NoProfile -EncodedCommand $encoded
+```
 
 Expected output:
+
+```text
 SOC Lab Encoded PowerShell Test
+```
 
-This command was safe.
-It did not download files.
-It did not create persistence.
-It did not disable Defender.
-It did not modify the system.
-It was only used to generate Sysmon telemetry for the lab.
+This command was safe and only used to generate Sysmon telemetry for the lab.
 
-Detection Result
-Splunk returned a Sysmon Event ID 1 process creation event from Target-PC.
+---
 
-The event showed:
-Host: Target-PC
-Source: Microsoft-Windows-Sysmon/Operational
-Event ID: 1
-Process: powershell.exe
-Command line: powershell.exe -NoProfile -EncodedCommand
+## 🕵️ Analyst Review
 
-Analyst Review
-The first thing I checked was whether the event was real process execution and not just a keyword match.
-Sysmon Event ID 1 confirmed that powershell.exe actually ran on Target-PC.
+Encoded PowerShell is not always malicious, but it should be reviewed because attackers often use it to hide command content. In this lab, Splunk returned a Sysmon Event ID `1` process creation event showing `powershell.exe` running with `-EncodedCommand`.
 
-The important fields were:
-Host
-User
-Image
-ParentImage
-CommandLine
-EventID
-Source
+The main follow-up is to decode the payload and review what the command actually did. I would also check the parent process, user context, network connections, file creation, and any child processes launched by PowerShell.
 
-The command line showed EncodedCommand, which means the actual PowerShell content was Base64 encoded.
-In a real investigation, the next step would be to decode the payload and review what it attempted to do.
+---
 
-Investigation Questions I asked myself
+## 🚦 Severity
 
-1.What host ran PowerShell?
+| Severity | Condition                                                              |
+| -------- | ---------------------------------------------------------------------- |
+| Medium   | Encoded PowerShell is observed                                         |
+| High     | PowerShell is launched by Office, a browser, or an unknown process     |
+| High     | Decoded command downloads remote content                               |
+| High     | Command disables Defender, creates persistence, or touches credentials |
+| High     | Suspicious network or child process activity follows execution         |
 
-2.What user ran the command?
+---
 
-3.What parent process launched PowerShell?
+## ⚠️ False Positives
 
-4.Was the encoded command decoded?
+| Possible Cause      | Notes                                      |
+| ------------------- | ------------------------------------------ |
+| Admin scripts       | Approved PowerShell automation             |
+| Software deployment | Endpoint management tools                  |
+| Security testing    | Authorized testing activity                |
+| Automation jobs     | Scheduled or scripted tasks                |
+| Lab testing         | Expected activity from this detection test |
 
-5.Did the decoded command download anything?
+---
 
-6.Did it create a file?
+## 📸 Validation Evidence
 
-7.Did it start another process?
+### Safe Encoded PowerShell Command Executed on Target-PC
 
-8.Did it connect to the network?
-
-9.Was there any follow on persistence
-
-Severity
-Medium
-
-Raise to High if:
-PowerShell was launched by Office, a browser, or an unknown process.
-The decoded command downloads remote content.
-The command disables Defender or logging.
-The command creates persistence.
-The command touches credentials or LSASS.
-The activity is tied to a suspicious user or host.
-
-False Positives
-Admin scripts
-Software deployment tools
-Security testing
-Endpoint management tools
-Lab validation
-Automation jobs
-
-Tuning Notes
-This search is broad on purpose for lab testing.
-In production, I would tune it by checking the parent process, user context, host role, and decoded payload.
-
-Good tuning ideas:
-Allowlist approved admin scripts.
-Allowlist known software deployment tools.
-Alert higher when the parent process is suspicious.
-Alert higher when encoded PowerShell is followed by network connections.
-Alert higher when encoded PowerShell creates files or starts another process.
-
-Recommended Response to this alert
-
-1.Identify the host and user.
-
-2.Decode the Base64 payload.
-
-3.Review the parent process.
-
-4.Check for network connections after execution.
-
-5.Check for new files created after execution.
-
-6.Search for child processes launched by PowerShell.
-
-7.Review related Sysmon and Windows Security events.
-
-8.Confirm whether the activity was authorized.
-
-9.Isolate the host if malicious behavior is confirmed.
-
-10.Document the decoded command and timeline.
-
-Validation Evidence
-
-1.Safe encoded PowerShell command executed on Target-PC
 <img width="624" height="125" alt="06_encoded_powershell_execution" src="https://github.com/user-attachments/assets/22cad9dc-9483-4dab-ac94-087b1fa61372" />
 
-2.Raw Sysmon Event ID 1 showing encoded PowerShell activity
+### Raw Sysmon Event ID 1 Showing Encoded PowerShell Activity
+
 <img width="624" height="167" alt="06_raw_sysmon_eventid1_encoded_powershell" src="https://github.com/user-attachments/assets/8062e3dd-b649-4722-9124-bd65545d5ff6" />
 
-3.Splunk detection showing EncodedCommand execution
+### Splunk Detection Showing EncodedCommand Execution
+
 <img width="624" height="170" alt="06_encoded_powershell_detection" src="https://github.com/user-attachments/assets/1797a798-9b2d-4b5a-8a74-182e575e0147" />
 
-Analyst Conclusion
-This detection confirmed encoded PowerShell execution on Target-PC using Sysmon Event ID 1.
+---
 
-The command used in the lab was intentionally safe, but the detection is still valuable because encoded PowerShell is commonly used to hide the real command being executed. The important part of the investigation is not just seeing EncodedCommand. The important part is decoding the payload, checking the parent process, and reviewing what happened after PowerShell ran.
+## ✅ Conclusion
 
-In this lab, Splunk showed the PowerShell process creation event and captured the encoded command in the command line. In a real SOC investigation, I would treat this as suspicious until the decoded command and surrounding activity proved it was authorized.
+This detection confirmed encoded PowerShell execution on `Target-PC` using Sysmon Event ID `1`. The command used in the lab was safe, but the detection is valuable because encoded PowerShell can hide the real command being executed. In a real investigation, I would decode the payload, review the parent process, and check for network connections, file creation, child processes, or other suspicious activity after execution.
+

@@ -1,7 +1,3 @@
-# active directory siem detection lab
-
-Description: Active Directory attack simulation and Splunk SIEM detection lab
-
 # 🛡️ Active Directory SIEM Detection Lab
 
 ### William Freeman
